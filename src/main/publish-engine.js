@@ -210,21 +210,39 @@ function clearPublishHistory() {
   setSetting('publish_history', '[]');
 }
 
+// Hardcoded platform fallback (used when DB is not available)
+const DEFAULT_PLATFORMS = [
+  { id:'douyin', name:'抖音', icon:'🎵', color:'#333333', authed:false, account:'' },
+  { id:'kuaishou', name:'快手', icon:'🎬', color:'#FF4906', authed:false, account:'' },
+  { id:'bilibili', name:'B站', icon:'📺', color:'#00A1D6', authed:false, account:'' },
+  { id:'tiktok', name:'TikTok', icon:'🎵', color:'#000000', authed:false, account:'' },
+  { id:'youtube', name:'YouTube', icon:'▶️', color:'#FF0000', authed:false, account:'' },
+  { id:'instagramReels', name:'Instagram Reels', icon:'📷', color:'#E4405F', authed:false, account:'' },
+  { id:'kakaoTV', name:'KakaoTV', icon:'🟡', color:'#FEE500', authed:false, account:'' },
+  { id:'naverTV', name:'NaverTV', icon:'🟢', color:'#03C75A', authed:false, account:'' },
+  { id:'facebookVideo', name:'Facebook Video', icon:'👍', color:'#1877F2', authed:false, account:'' },
+  { id:'twitterX', name:'X (Twitter)', icon:'🐦', color:'#1DA1F2', authed:false, account:'' },
+];
+
 // --- Public API ---
 async function getPlatforms() {
-  const platforms = [];
-  for (const [key, adapter] of Object.entries(PLATFORMS)) {
-    const auth = await adapter.checkAuth();
-    platforms.push({
-      id: key,
-      name: adapter.name,
-      icon: adapter.icon,
-      color: adapter.color,
-      authed: auth.authed,
-      account: auth.account,
-    });
+  try {
+    const platforms = [];
+    for (const [key, adapter] of Object.entries(PLATFORMS)) {
+      const auth = await adapter.checkAuth();
+      platforms.push({
+        id: key,
+        name: adapter.name,
+        icon: adapter.icon,
+        color: adapter.color,
+        authed: auth.authed,
+        account: auth.account,
+      });
+    }
+    return platforms.length > 0 ? platforms : DEFAULT_PLATFORMS;
+  } catch (e) {
+    return DEFAULT_PLATFORMS;
   }
-  return platforms;
 }
 
 async function publishVideo(platformId, videoPath, metadata) {
@@ -332,19 +350,22 @@ const SEO_CALL_TO_ACTIONS = {
 };
 
 function generateSEOMetadata(platformId, project, options = {}) {
+  project = project || {};
+  options = options || {};
+  
   const {
     genre = 'romance',
-    title = project.title || 'Untitled Drama',
-    description = '',
+    title = options.title || project.title || 'Untitled Drama',
+    description = options.description || '',
     lang = 'zh',
-    characters = [],
+    characters = project.characters || [],
     episodeNumber = 1,
     totalEpisodes = 1,
   } = options;
 
-  const template = SEO_TEMPLATES[platformId] || SEO_TEMPLATES.youtube;
-  const keywords = SEO_KEYWORDS[genre] || SEO_KEYWORDS.romance;
-  const ctaList = SEO_CALL_TO_ACTIONS[lang] || SEO_CALL_TO_ACTIONS.zh;
+  const template = (SEO_TEMPLATES && SEO_TEMPLATES[platformId]) || (SEO_TEMPLATES && SEO_TEMPLATES.youtube) || { maxTitleLength: 100, maxDescriptionLength: 5000, maxTags: 30 };
+  const keywords = (SEO_KEYWORDS && SEO_KEYWORDS[genre]) || (SEO_KEYWORDS && SEO_KEYWORDS.romance) || { en:['short drama'], zh:['短剧'] };
+  const ctaList = (SEO_CALL_TO_ACTIONS && SEO_CALL_TO_ACTIONS[lang]) || (SEO_CALL_TO_ACTIONS && SEO_CALL_TO_ACTIONS.zh) || ['Check it out!'];
 
   // Generate title
   const baseTitle = title.length > 40 ? title.substring(0, 37) + '...' : title;

@@ -65,15 +65,44 @@ class TranslationEngine {
     this.cache = new Map(); // zhText + targetLang => translatedText
   }
 
+  _getRegionForCode(code) {
+    const regionDefs = {
+      global: ['en'],
+      china: ['zh','bo'],
+      southAsia: ['hi','bn','mr','te','ta','gu','ml','kn','or','ne','si'],
+      spanish: ['es'],
+      french: ['fr'],
+      middleEast: ['ar','ur','he','fa'],
+      slavic: ['ru','uk'],
+      romance: ['pt','it','ro'],
+      germanic: ['de','nl'],
+      nordic: ['sv','da'],
+      eastAsia: ['ja','ko'],
+      seAsia: ['id','vi','th','my','km','tl','ms','lo'],
+      westSlavic: ['pl','cs'],
+      finnoUgric: ['hu','fi'],
+      balkan: ['el','tr'],
+      africa: ['sw','am'],
+      centralAsia: ['ka','hy','mn'],
+    };
+    for (const [region, codes] of Object.entries(regionDefs)) {
+      if (codes.includes(code)) return region;
+    }
+    return 'other';
+  }
+
   getAvailableLanguages() {
     return Object.entries(LANGUAGES).map(([code, info]) => ({
       code, ...info,
+      region: this._getRegionForCode(code),
       supported: true,
     }));
   }
 
   getLanguageInfo(code) {
-    return LANGUAGES[code] || null;
+    const info = LANGUAGES[code];
+    if (!info) return null;
+    return { ...info, region: this._getRegionForCode(code) };
   }
 
   // Group languages by region

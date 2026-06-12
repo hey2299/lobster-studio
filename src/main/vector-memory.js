@@ -9,22 +9,36 @@ let db;
 let userDataPath = '';
 
 // Deterministic embedding for character profiles (128-dim vector)
+// Supports both profile objects and raw text queries
 function generateEmbedding(char) {
   const dims = 128;
-  const seed = [
-    char.name || '',
-    char.role || '',
-    char.personality || '',
-    char.appearance || '',
-    char.voiceType || '',
-    ...(char.attributes || []),
-    ...(char.styleTraits || []),
-  ].join(' ');
+  let seed;
+  
+  if (typeof char === 'string') {
+    // Raw text query — use directly
+    seed = char;
+  } else if (char && typeof char === 'object') {
+    // Profile object
+    seed = [
+      char.name || '',
+      char.role || '',
+      char.personality || '',
+      char.appearance || '',
+      char.voiceType || '',
+      ...(char.attributes || []),
+      ...(char.styleTraits || []),
+    ].join(' ');
+  } else {
+    seed = String(char || '');
+  }
 
   const vector = new Array(dims).fill(0);
   for (let i = 0; i < seed.length; i++) {
     const code = seed.charCodeAt(i);
     vector[i % dims] += (code * (i + 1)) / 1000;
+    // Better distribution: use position-dependent weight
+    const posWeight = 1 + Math.sin(i * 0.1) * 0.5;
+    vector[(i + 7) % dims] += (code * posWeight) / 500;
   }
   // Normalize
   let magnitude = 0;
@@ -95,7 +109,10 @@ function storeCharacterMemory(char) {
 }
 
 function searchSimilarCharacters(queryChar, threshold = 0.35, limit = 5) {
-  const queryVector = generateEmbedding(queryChar);
+  const queryObj = typeof queryChar === 'string'
+    ? { id: '__query__', name: '', role: '', personality: queryChar }
+    : queryChar;
+  const queryVector = generateEmbedding(queryObj);
   const stmt = db.prepare('SELECT character_id, vector_json, profile_json FROM character_vectors');
   const scored = [];
 
@@ -164,8 +181,11 @@ function getCharacterMemory(characterId) {
 function getMemoryStats() {
   const count = db.exec('SELECT COUNT(*) as c FROM character_vectors');
   const aliasCount = db.exec('SELECT COUNT(*) as c FROM character_aliases');
+  const total = count[0]?.values?.[0]?.[0] || 0;
   return {
-    characters: count[0]?.values?.[0]?.[0] || 0,
+    totalCharacters: total,
+    characters: total,
+    totalAliases: aliasCount[0]?.values?.[0]?.[0] || 0,
     aliases: aliasCount[0]?.values?.[0]?.[0] || 0,
   };
 }

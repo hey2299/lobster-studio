@@ -107,3 +107,75 @@
 | 2026-06-12 13:17 | 55 | 9 | 修正测试期望后，暴露出7个真缺陷 |
 
 *每次运行 `node scripts/self-test.js` 自动追加*
+
+### [ACTIVE] VM: semantic search - cold boss
+- **Time**: 2026/6/12 13:34:07
+- **Error**: `No results`
+- **Solution**: TBD
+
+
+### [ACTIVE] VM: semantic search - warm girl
+- **Time**: 2026/6/12 13:34:07
+- **Error**: `No results`
+- **Solution**: TBD
+
+
+### [ACTIVE] LIC: pro has AI
+- **Time**: 2026/6/12 13:34:07
+- **Error**: `PRO should have AI`
+- **Solution**: TBD
+
+
+### [ACTIVE] LIC: enterprise unlimited
+- **Time**: 2026/6/12 13:34:07
+- **Error**: `Enterprise unlimited`
+- **Solution**: TBD
+
+
+### [ACTIVE] PUB: getPlatforms returns data
+- **Time**: 2026/6/12 13:34:07
+- **Error**: `Expected >=6 platforms, got 0`
+- **Solution**: TBD
+
+
+### [ACTIVE] USR: register
+- **Time**: 2026/6/12 13:34:07
+- **Error**: `用户名已存在`
+- **Solution**: TBD
+
+
+### [ACTIVE] VM: semantic search - cold boss
+- **Time**: 2026/6/12 13:34:44
+- **Error**: `No results`
+- **Solution**: TBD
+
+
+### [ACTIVE] VM: semantic search - warm girl
+- **Time**: 2026/6/12 13:34:44
+- **Error**: `No results`
+- **Solution**: TBD
+
+
+### [ACTIVE] LIC: enterprise unlimited
+- **Time**: 2026/6/12 13:34:44
+- **Error**: `Enterprise batch failed`
+- **Solution**: TBD
+
+
+### [ACTIVE] USR: register
+- **Time**: 2026/6/12 13:34:44
+- **Error**: `用户名已存在`
+- **Solution**: TBD
+
+
+### [ACTIVE] LIC: enterprise unlimited
+- **Time**: 2026/6/12 13:35:50
+- **Error**: `Enterprise batch failed`
+- **Solution**: TBD
+
+
+### [ACTIVE] USR: register
+- **Time**: 2026/6/12 13:35:50
+- **Error**: `用户名已存在`
+- **Solution**: TBD
+

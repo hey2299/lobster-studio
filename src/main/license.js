@@ -60,11 +60,14 @@ function getLicense() {
     if (fs.existsSync(LICENSE_PATH)) {
       const data = JSON.parse(fs.readFileSync(LICENSE_PATH, 'utf8'));
       if (data.licenseKey && verifyLicenseKey(data.licenseKey)) {
-        const edition = data.edition || 'professional';
+        const rawEdition = data.edition || 'professional';
+        // Map aliases (enterprise → lifetime)
+        const aliases = { enterprise: 'lifetime' };
+        const edition = aliases[rawEdition] || rawEdition;
         return {
           activated: true,
           licenseKey: data.licenseKey,
-          edition,
+          edition: rawEdition, // keep original for display
           activatedDate: data.activatedDate,
           features: EDITIONS[edition]?.features || EDITIONS.professional.features,
         };
@@ -106,8 +109,9 @@ function verifyLicenseKey(key) {
   // In production, this would verify against a server
   if (!key || typeof key !== 'string') return false;
   
-  // Accept demo key for testing
-  if (key === 'LOBSTER-PRO-2026-DEMO') return true;
+  // Accept demo keys for testing
+  const DEMO_KEYS = ['LOBSTER-PRO-2026-DEMO', 'LOBSTER-ENT-2026-DEMO', 'LOBSTER-LIFETIME-DEMO'];
+  if (DEMO_KEYS.includes(key)) return true;
   
   // Format check: 4 groups of 5 alphanumeric chars
   const pattern = /^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/;
