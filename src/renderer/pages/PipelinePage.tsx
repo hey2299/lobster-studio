@@ -207,6 +207,77 @@ const PipelinePage: React.FC = () => {
     }
   };
 
+  const handleBatchExport = async () => {
+    if (scenes.length === 0) return;
+    setProgressMsg('📦 正在批量导出所有格式...');
+    let exported = 0;
+    // SRT
+    try {
+      const srt = await subtitle.generateSRT(scenes);
+      const blob = new Blob([srt], { type: 'text/plain' });
+      downloadBlob(blob, `${projectName || 'output'}_字幕.srt`);
+      exported++;
+    } catch {}
+    // ASS
+    try {
+      const ass = await subtitle.generateASS(scenes, {
+        fontName: '思源黑体', fontSize: 36, primaryColor: '&H00FFFFFF',
+      });
+      const blob = new Blob([ass], { type: 'text/plain' });
+      downloadBlob(blob, `${projectName || 'output'}_字幕.ass`);
+      exported++;
+    } catch {}
+    // CapCut
+    try {
+      const capcut = await draft.exportCapCut({
+        title: projectName || '批量导出',
+        scenes,
+      }, scenes.map(s => ({ dialogue: s.dialogue, duration: s.duration })));
+      if (capcut && capcut.success && capcut.data) {
+        const blob = new Blob([JSON.stringify(capcut.data, null, 2)], { type: 'application/json' });
+        downloadBlob(blob, `${projectName || 'output'}_剪映草稿.json`);
+        exported++;
+      }
+    } catch {}
+    // FCPXML
+    try {
+      const xml = await draft.exportFCPXML({ title: projectName || '批量导出' }, scenes.map(s => ({
+        dialogue: s.dialogue,
+        duration: s.duration,
+      })));
+      if (xml && xml.success && xml.data) {
+        const blob = new Blob([xml.data], { type: 'application/xml' });
+        downloadBlob(blob, `${projectName || 'output'}_FCPXML.fcpxml`);
+        exported++;
+      }
+    } catch {}
+    // BGM
+    if (scenes.some(s => s.audioDataUrl)) {
+      try {
+        const bgmData = scenes.find(s => s.audioDataUrl);
+        if (bgmData?.audioDataUrl) {
+          const resp = await fetch(bgmData.audioDataUrl);
+          const blob = await resp.blob();
+          downloadBlob(blob, `${projectName || 'output'}_配乐.wav`);
+          exported++;
+        }
+      } catch {}
+    }
+    setProgressMsg(`✅ 批量完成：导出 ${exported} 个文件`);
+    setTimeout(() => setProgressMsg(''), 3000);
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const clearPipeline = () => {
     setScenes([]);
     setStep('idle');
@@ -374,7 +445,7 @@ const PipelinePage: React.FC = () => {
           </label>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
           {scenes.length > 0 && (
             <button onClick={startFullPipeline} disabled={step === 'composing'}
               className="btn-primary"
@@ -388,12 +459,18 @@ const PipelinePage: React.FC = () => {
           )}
 
           {step === 'done' && outputPath && (
-            <button onClick={() => {
-              const electron: any = (window as any).electronAPI;
-              if (electron?.saveFile) electron.saveFile(outputPath.split('/').pop() || 'output.mp4');
-            }} className="btn-primary" style={{ background: '#10b981', boxShadow: '0 2px 12px rgba(16,185,129,0.3)' }}>
-              💾 保存视频
-            </button>
+            <>
+              <button onClick={() => {
+                const electron: any = (window as any).electronAPI;
+                if (electron?.saveFile) electron.saveFile(outputPath.split('/').pop() || 'output.mp4');
+              }} className="btn-primary" style={{ background: '#10b981', boxShadow: '0 2px 12px rgba(16,185,129,0.3)' }}>
+                💾 保存视频
+              </button>
+              <button onClick={handleBatchExport}
+                className="btn-secondary" style={{ fontSize: 13 }}>
+                📦 批量导出全部
+              </button>
+            </>
           )}
         </div>
       </div>
