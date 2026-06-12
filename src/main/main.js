@@ -1,7 +1,11 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const { initDatabase, getCharacters, saveCharacter, deleteCharacter,
+  getProjects, saveProject, deleteProject, getSetting, setSetting } = require('./database');
+const { generateScript, generateCharacterPrompt, expandStoryboard, configureAI } = require('./ai-engine');
 
 let mainWindow;
+let dbInitialized = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -20,57 +24,105 @@ function createWindow() {
     backgroundColor: '#0a0a0f',
   });
 
-  // In dev, load from Vite dev server; in prod, load built files
   const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
-
   if (isDev && process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
     mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
   }
+}
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
+app.whenReady().then(() => {
+  // Initialize database
+  try {
+    const dbPath = initDatabase();
+    console.log('Database initialized at:', dbPath);
+    dbInitialized = true;
+  } catch (e) {
+    console.error('Database init failed:', e.message);
+  }
+
+  // Register all IPC handlers
+  registerIpcHandlers();
+  createWindow();
+});
+
+function registerIpcHandlers() {
+  // === Dialog ===
+  ipcMain.handle('dialog:openFile', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: '剧本文件', extensions: ['txt', 'md', 'docx', 'pdf'] },
+        { name: '所有文件', extensions: ['*'] },
+      ],
+    });
+    return result;
+  });
+
+  ipcMain.handle('dialog:saveFile', async (_, defaultName) => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: defaultName,
+      filters: [{ name: 'MP4 视频', extensions: ['mp4'] }, { name: '所有文件', extensions: ['*'] }],
+    });
+    return result;
+  });
+
+  ipcMain.handle('app:getVersion', () => app.getVersion());
+  ipcMain.handle('app:getPlatform', () => process.platform);
+
+  // === Database ===
+  ipcMain.handle('db:getCharacters', () => dbInitialized ? getCharacters() : []);
+  ipcMain.handle('db:saveCharacter', (_, char) => dbInitialized ? saveCharacter(char) : null);
+  ipcMain.handle('db:deleteCharacter', (_, id) => dbInitialized ? deleteCharacter(id) : null);
+  ipcMain.handle('db:getProjects', () => dbInitialized ? getProjects() : []);
+  ipcMain.handle('db:saveProject', (_, proj) => dbInitialized ? saveProject(proj) : null);
+  ipcMain.handle('db:deleteProject', (_, id) => dbInitialized ? deleteProject(id) : null);
+  ipcMain.handle('db:getSetting', (_, key) => dbInitialized ? getSetting(key) : null);
+  ipcMain.handle('db:setSetting', (_, key, value) => dbInitialized ? setSetting(key, value) : null);
+
+  // === AI Engine ===
+  ipcMain.handle('ai:configure', (_, provider, apiKey, model) => {
+    configureAI(provider, apiKey, model);
+    return true;
+  });
+
+  ipcMain.handle('ai:generateScript', async (_, params) => {
+    try {
+      mainWindow?.webContents.send('ai:progress', { step: 'scripts', message: 'AI 正在创作剧本...' });
+      const result = await generateScript(params);
+      mainWindow?.webContents.send('ai:progress', { step: 'scripts', message: '剧本完成！', done: true });
+      return { success: true, data: result };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('ai:generateCharacterPrompt', async (_, char) => {
+    try {
+      mainWindow?.webContents.send('ai:progress', { step: 'portrait', message: 'AI 正在设计角色形象...' });
+      const result = await generateCharacterPrompt(char);
+      return { success: true, data: result };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('ai:expandStoryboard', async (_, scenes) => {
+    try {
+      mainWindow?.webContents.send('ai:progress', { step: 'storyboard', message: 'AI 正在生成分镜...' });
+      const result = await expandStoryboard(scenes);
+      return { success: true, data: result };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
   });
 }
 
-app.whenReady().then(createWindow);
-
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
-
-// IPC handlers for file operations
-ipcMain.handle('dialog:openFile', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile'],
-    filters: [
-      { name: '剧本文件', extensions: ['txt', 'md', 'docx', 'pdf'] },
-      { name: '所有文件', extensions: ['*'] },
-    ],
-  });
-  return result;
-});
-
-ipcMain.handle('dialog:saveFile', async (_, defaultName) => {
-  const result = await dialog.showSaveDialog(mainWindow, {
-    defaultPath: defaultName,
-    filters: [
-      { name: 'MP4 视频', extensions: ['mp4'] },
-      { name: '所有文件', extensions: ['*'] },
-    ],
-  });
-  return result;
-});
-
-// App info
-ipcMain.handle('app:getVersion', () => app.getVersion());
-ipcMain.handle('app:getPlatform', () => process.platform);

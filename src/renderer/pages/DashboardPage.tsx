@@ -3,6 +3,7 @@ import { PageKey } from '../App';
 
 interface Props {
   onNavigate: (page: PageKey) => void;
+  stats: { projects: number; characters: number };
 }
 
 const quickActions = [
@@ -12,10 +13,9 @@ const quickActions = [
   { key: 'storyboard' as PageKey, title: '继续上次制作', desc: '回到最近的项目', icon: '▶️', color: '#10b981' },
 ];
 
-const DashboardPage: React.FC<Props> = ({ onNavigate }) => {
+const DashboardPage: React.FC<Props> = ({ onNavigate, stats }) => {
   return (
     <div className="animate-fade-in">
-      {/* Hero section */}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, background: 'linear-gradient(135deg, #e84142, #ff6b6b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           欢迎回来
@@ -25,7 +25,6 @@ const DashboardPage: React.FC<Props> = ({ onNavigate }) => {
         </p>
       </div>
 
-      {/* Quick action cards */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
@@ -67,44 +66,47 @@ const DashboardPage: React.FC<Props> = ({ onNavigate }) => {
         ))}
       </div>
 
-      {/* Recent projects */}
-      <section>
+      <section style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: 'var(--text-primary)' }}>
           最近项目
         </h2>
-        <div style={{
-          background: 'var(--bg-tertiary)',
-          border: '1px solid var(--border)',
-          borderRadius: 12,
-          padding: 32,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 200,
-          color: 'var(--text-muted)',
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🎬</div>
-          <p style={{ fontSize: 15, marginBottom: 4 }}>还没有项目</p>
-          <p style={{ fontSize: 13 }}>点击上方「一键生成短剧」开始你的第一部作品</p>
-        </div>
+        {stats.projects === 0 ? (
+          <div style={{
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            padding: 32,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: 200,
+            color: 'var(--text-muted)',
+          }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🎬</div>
+            <p style={{ fontSize: 15, marginBottom: 4 }}>还没有项目</p>
+            <p style={{ fontSize: 13 }}>点击「一键生成短剧」开始你的第一部作品</p>
+          </div>
+        ) : (
+          <div style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+            你有 {stats.projects} 个项目和 {stats.characters} 个角色
+          </div>
+        )}
       </section>
 
-      {/* Stats footer */}
       <div style={{
         display: 'flex',
         gap: 24,
-        marginTop: 24,
         padding: '16px 20px',
         background: 'var(--bg-tertiary)',
         border: '1px solid var(--border)',
         borderRadius: 12,
       }}>
         {[
-          { label: '已创作', value: '0', unit: '部' },
-          { label: '角色库', value: '0', unit: '个' },
-          { label: '音色库', value: '0', unit: '种' },
-          { label: 'API 余额', value: '--', unit: '' },
+          { label: '已创作', value: String(stats.projects), unit: '部' },
+          { label: '角色库', value: String(stats.characters), unit: '个' },
+          { label: '音色库', value: '20+', unit: '种' },
+          { label: 'AI 引擎', value: 'DeepSeek', unit: '' },
         ].map((stat) => (
           <div key={stat.label} style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent)' }}>
