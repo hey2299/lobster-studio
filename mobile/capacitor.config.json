@@ -1,0 +1,17 @@
+{
+  "appId": "com.lobsterstudio.app",
+  "appName": "龙虾短剧工坊",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#0a0a0f",
+      "showSpinner": false
+    }
+  }
+}
