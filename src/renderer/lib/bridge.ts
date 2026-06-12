@@ -28,6 +28,8 @@ declare global {
       aiGenerateImage: (scene: any) => Promise<{ success: boolean; data?: { sceneIndex: number; imageUrl: string }; error?: string }>;
       aiGenerateAllImages: (scenes: any[]) => Promise<{ success: boolean; data?: { sceneIndex: number; imageUrl: string }[]; error?: string }>;
       aiGenerateTTS: (text: string, voiceType: string) => Promise<{ success: boolean; data?: { audioUrl: string }; error?: string }>;
+      videoCompose: (params: any) => Promise<{ success: boolean; data?: { outputPath: string }; error?: string }>;
+      videoListOutputs: () => Promise<{ name: string; path: string; size: number; createdAt: string }[]>;
     };
   }
 }
@@ -61,6 +63,8 @@ export const ai = {
   generateImage: (scene: any) => api?.aiGenerateImage(scene) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
   generateAllImages: (scenes: any[]) => api?.aiGenerateAllImages(scenes) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
   generateTTS: (text: string, voiceType: string) => api?.aiGenerateTTS(text, voiceType) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
+  composeVideo: (params: any) => api?.videoCompose(params) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
+  listOutputs: () => api?.videoListOutputs() ?? Promise.resolve([]),
 };
 
 // Events from main process

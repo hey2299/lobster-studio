@@ -36,6 +36,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   aiGenerateImage: (scene) => ipcRenderer.invoke('ai:generateImage', scene),
   aiGenerateAllImages: (scenes) => ipcRenderer.invoke('ai:generateAllImages', scenes),
 
+  // Video Composition
+  videoCompose: (params) => ipcRenderer.invoke('video:compose', params),
+  videoListOutputs: () => ipcRenderer.invoke('video:listOutputs'),
+
   // TTS
   aiGenerateTTS: (text, voiceType) => ipcRenderer.invoke('ai:generateTTS', text, voiceType),
 });

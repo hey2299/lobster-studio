@@ -4,6 +4,7 @@ const { initDatabase, getCharacters, saveCharacter, deleteCharacter,
   getProjects, saveProject, deleteProject, getSetting, setSetting } = require('./database');
 const { generateScript, generateCharacterPrompt, expandStoryboard, configureAI, generateImage, generateAllSceneImages, generateTTS } = require('./ai-engine');
 const memory = require('./vector-memory');
+const { composeVideo, exportFrame, getAvailableOutputs } = require('./video-composer');
 
 let mainWindow;
 let dbInitialized = false;
@@ -169,6 +170,22 @@ function registerIpcHandlers() {
 
   ipcMain.handle('memory:getStats', () => {
     return memory.getMemoryStats();
+  });
+
+  // Video Composition (Phase 3)
+  ipcMain.handle('video:compose', async (_, params) => {
+    try {
+      mainWindow?.webContents.send('ai:progress', { step: 'video', message: '🎬 正在合成视频...' });
+      const result = await composeVideo(params);
+      mainWindow?.webContents.send('ai:progress', { step: 'video', message: '✅ 视频合成完成！', done: true });
+      return { success: true, data: { outputPath: result } };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('video:listOutputs', () => {
+    return getAvailableOutputs();
   });
 
   // TTS (Phase 2)

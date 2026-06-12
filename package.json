@@ -10,6 +10,8 @@
     "electron:dev": "electron ."
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "compute-cosine-similarity": "^1.1.0",
     "framer-motion": "^12.0.0",
     "lucide-react": "^0.400.0",
