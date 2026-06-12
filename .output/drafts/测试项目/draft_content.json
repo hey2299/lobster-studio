@@ -1,0 +1,90 @@
+{
+  "version": "3.2.0",
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 24
+  },
+  "materials": [
+    {
+      "id": "M1",
+      "type": "video",
+      "path": "materials/scene_1.png",
+      "width": 1920,
+      "height": 1080,
+      "duration": 4000000,
+      "fps": 24
+    }
+  ],
+  "tracks": [
+    {
+      "id": "T0",
+      "type": "main",
+      "segments": [
+        {
+          "id": "S1",
+          "material_id": "M1",
+          "type": "video",
+          "start_time": 0,
+          "end_time": 4000000,
+          "duration": 4000000,
+          "transform": {
+            "scale": 1,
+            "rotation": 0,
+            "position": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "speed": 1,
+          "volume": 1
+        }
+      ]
+    }
+  ],
+  "duration": 4000000,
+  "subtitles": [
+    {
+      "id": "SUB_1_1",
+      "type": "subtitle",
+      "start_time": 0,
+      "end_time": 2000000,
+      "content": "林浩宇：这份合同你签也得签",
+      "style": {
+        "font_size": 36,
+        "font_color": "#FFFFFF",
+        "outline_color": "#000000",
+        "outline_width": 2,
+        "alignment": "bottom_center",
+        "font_family": "Microsoft YaHei",
+        "bold": false
+      }
+    },
+    {
+      "id": "SUB_1_2",
+      "type": "subtitle",
+      "start_time": 2000000,
+      "end_time": 4000000,
+      "content": "苏小雨：我愿意",
+      "style": {
+        "font_size": 36,
+        "font_color": "#FFFFFF",
+        "outline_color": "#000000",
+        "outline_width": 2,
+        "alignment": "bottom_center",
+        "font_family": "Microsoft YaHei",
+        "bold": false
+      }
+    }
+  ],
+  "audio_settings": {
+    "master_volume": 1
+  },
+  "export_settings": {
+    "resolution": "1920x1080",
+    "fps": 24,
+    "bitrate": 8000000,
+    "format": "mp4",
+    "codec": "h264"
+  }
+}

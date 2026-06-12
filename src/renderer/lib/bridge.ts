@@ -44,6 +44,15 @@ declare global {
       licenseDeactivate: () => Promise<any>;
       licenseEditions: () => Promise<any>;
       licenseCheckFeature: (feature: string) => Promise<any>;
+      // BGM
+      bgmGenerate: (scenes: any[], moodOverrides?: Record<number, string>) => Promise<{ success: boolean; data?: { bgmDataUrl: string }; error?: string }>;
+      // Subtitles
+      subtitleGenerateSRT: (scenes: any[]) => Promise<string>;
+      subtitleGenerateASS: (scenes: any[], options?: any) => Promise<string>;
+      // Draft Export
+      draftExportCapCut: (project: any, scenes: any[], options?: any) => Promise<{ success: boolean; data?: { draftDir: string }; error?: string }>;
+      draftExportFCPXML: (project: any, scenes: any[], options?: any) => Promise<{ success: boolean; data?: { xml: string }; error?: string }>;
+      draftExportSubtitles: (scenes: any[], options?: any) => Promise<string>;
     };
   }
 }
@@ -67,6 +76,25 @@ export const memory = {
   findByName: (name: string) => api?.memoryFindByName(name) ?? Promise.resolve(null),
   addAlias: (id: string, alias: string, script?: string) => api?.memoryAddAlias(id, alias, script) ?? Promise.resolve(false),
   getStats: () => api?.memoryGetStats() ?? Promise.resolve({ characters: 0, aliases: 0 }),
+};
+
+export const bgm = {
+  generate: (scenes: any[], moodOverrides?: Record<number, string>) =>
+    api?.bgmGenerate(scenes, moodOverrides) ?? Promise.resolve({ success: false }),
+};
+
+export const subtitle = {
+  generateSRT: (scenes: any[]) => api?.subtitleGenerateSRT(scenes) ?? Promise.resolve(''),
+  generateASS: (scenes: any[], options?: any) => api?.subtitleGenerateASS(scenes, options) ?? Promise.resolve(''),
+};
+
+export const draft = {
+  exportCapCut: (project: any, scenes: any[], options?: any) =>
+    api?.draftExportCapCut(project, scenes, options) ?? Promise.resolve({ success: false }),
+  exportFCPXML: (project: any, scenes: any[], options?: any) =>
+    api?.draftExportFCPXML(project, scenes, options) ?? Promise.resolve({ success: false }),
+  exportSubtitles: (scenes: any[], options?: any) =>
+    api?.draftExportSubtitles(scenes, options) ?? Promise.resolve(''),
 };
 
 export const ai = {

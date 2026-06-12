@@ -8,6 +8,9 @@ const { composeVideo, exportFrame, getAvailableOutputs } = require('./video-comp
 const { getStatus: gitStatus, setRemote: gitSetRemote, removeRemote: gitRemoveRemote, push: gitPush, commitAndPush: gitCommitAndPush, getRecentCommits: gitRecentCommits } = require('./git-sync');
 const { getPlatforms, publishVideo, getPublishHistory, clearPublishHistory } = require('./publish-engine');
 const { getLicense, activateLicense, deactivateLicense, getEditionInfo, checkFeature } = require('./license');
+const { generateBGMForScript } = require('./bgm-engine');
+const { generateSRT, generateASS } = require('./subtitle-engine');
+const { exportCapCutDraft, exportFCPXML, exportASSProject } = require('./draft-export');
 
 let mainWindow;
 let dbInitialized = false;
@@ -248,6 +251,50 @@ function registerIpcHandlers() {
   ipcMain.handle('publish:clearHistory', async () => {
     clearPublishHistory();
     return { success: true };
+  });
+
+  // === BGM Engine (Phase 3+) ===
+  ipcMain.handle('bgm:generate', async (_, scenes, moodOverrides) => {
+    try {
+      mainWindow?.webContents.send('ai:progress', { step: 'bgm', message: '🎵 正在生成背景配乐...' });
+      const bgmDataUrl = generateBGMForScript(scenes, moodOverrides || {});
+      mainWindow?.webContents.send('ai:progress', { step: 'bgm', message: '✅ 配乐完成！', done: true });
+      return { success: true, data: { bgmDataUrl } };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // === Subtitle Engine ===
+  ipcMain.handle('subtitle:generateSRT', async (_, scenes) => {
+    return generateSRT(scenes);
+  });
+
+  ipcMain.handle('subtitle:generateASS', async (_, scenes, options) => {
+    return generateASS(scenes, options || {});
+  });
+
+  // === Draft Export (CapCut, FCPXML, ASS) ===
+  ipcMain.handle('draft:exportCapCut', async (_, project, scenes, options) => {
+    try {
+      const draftDir = exportCapCutDraft(project, scenes, options || {});
+      return { success: true, data: { draftDir } };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('draft:exportFCPXML', async (_, project, scenes, options) => {
+    try {
+      const xml = exportFCPXML(project, scenes, options || {});
+      return { success: true, data: { xml } };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('draft:exportSubtitles', async (_, scenes, options) => {
+    return exportASSProject(scenes, options || {});
   });
 
   // TTS (Phase 2)

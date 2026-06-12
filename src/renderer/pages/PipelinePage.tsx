@@ -1,31 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { ai, onAIProgress } from '../lib/bridge';
-import type { Scene } from '../types';
+import { ai, bgm, subtitle, draft, onAIProgress } from '../lib/bridge';
 
 interface PipelineScene {
-  scene: Scene;
+  id: string;
+  index: number;
+  location: string;
+  description: string;
+  mood: string;
+  cameraAngle: string;
+  dialogue: { characterName: string; line: string; emotion?: string }[];
   imageDataUrl: string;
   audioDataUrl: string;
   duration: number;
 }
 
-type PipelineStep = 'preparing' | 'collecting' | 'composing' | 'done' | 'error';
+type Step = 'idle' | 'preparing' | 'bgm' | 'composing' | 'done' | 'error';
 
 const PipelinePage: React.FC = () => {
-  const [projectName, setProjectName] = useState('');
   const [scenes, setScenes] = useState<PipelineScene[]>([]);
-  const [step, setStep] = useState<PipelineStep>('preparing');
+  const [projectName, setProjectName] = useState('');
+  const [step, setStep] = useState<Step>('idle');
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState('');
   const [outputPath, setOutputPath] = useState('');
   const [outputs, setOutputs] = useState<any[]>([]);
   const [error, setError] = useState('');
+  const [bgmEnabled, setBgmEnabled] = useState(true);
+  const [subtitleFormat, setSubtitleFormat] = useState<string>('srt');
+  const [draftExport, setDraftExport] = useState<string>('none');
 
   useEffect(() => {
     loadOutputs();
     return onAIProgress((data: any) => {
       setProgressMsg(data.message);
-      if (data.step === 'video' && data.done) {
+      if (data.done && data.step === 'video') {
         setStep('done');
         loadOutputs();
       }
@@ -37,97 +45,141 @@ const PipelinePage: React.FC = () => {
     setOutputs(list);
   };
 
-  // Load from storyboard (in full app this would read from session state)
-  const loadFromStoryboard = () => {
-    // Check localStorage for last storyboard data
-    try {
-      const saved = localStorage.getItem('lobster_pipeline_scenes');
-      if (saved) {
-        const data = JSON.parse(saved);
-        setScenes(data.scenes || []);
-        setProjectName(data.projectName || '未命名短剧');
-      }
-    } catch {}
+  const loadDemo = () => {
+    const colors = ['#e84142', '#4a6cf7', '#10b981', '#f59e0b'];
+    const demoScenes: PipelineScene[] = [
+      { id: 'd1', index: 0, location: '顶楼办公室·白天', description: '霸道总裁站在落地窗前', mood: '紧张', cameraAngle: '中景', dialogue: [{ characterName: '林浩宇', line: '这份合同，你签也得签，不签也得签。', emotion: '冷峻' }], imageDataUrl: createPlaceholderImage(colors[0], 'Scene 1: Office', '紧张'), audioDataUrl: '', duration: 4 },
+      { id: 'd2', index: 1, location: '酒店大厅·夜晚', description: '女主走下楼梯，男主一眼看到她', mood: '浪漫', cameraAngle: '全景', dialogue: [{ characterName: '苏小雨', line: '我不是来参加宴会的。', emotion: '坚定' }], imageDataUrl: createPlaceholderImage(colors[1], 'Scene 2: Hotel', '浪漫'), audioDataUrl: '', duration: 4 },
+      { id: 'd3', index: 2, location: '医院走廊·白天', description: '男主焦急等待手术结果', mood: '焦虑', cameraAngle: '跟拍', dialogue: [{ characterName: '陈管家', line: '少爷，苏小姐不会有事的。', emotion: '安慰' }, { characterName: '林浩宇', line: '如果她出事，我不会原谅自己。', emotion: '痛苦' }], imageDataUrl: createPlaceholderImage(colors[2], 'Scene 3: Hospital', '焦虑'), audioDataUrl: '', duration: 6 },
+      { id: 'd4', index: 3, location: '花园·黄昏', description: '男主单膝跪地求婚', mood: '幸福', cameraAngle: '特写', dialogue: [{ characterName: '林浩宇', line: '从见到你的第一天起，我的心就不属于自己了。', emotion: '深情' }, { characterName: '苏小雨', line: '我愿意。', emotion: '感动' }], imageDataUrl: createPlaceholderImage(colors[3], 'Scene 4: Garden', '幸福'), audioDataUrl: '', duration: 6 },
+    ];
+    setScenes(demoScenes);
+    setProjectName('霸道总裁的契约新娘（演示）');
+    setProgressMsg('✅ 加载了 4 个分镜演示数据');
+    setTimeout(() => setProgressMsg(''), 3000);
   };
 
-  const startComposition = async () => {
-    if (scenes.length === 0) {
-      setError('请先从分镜板加载数据');
-      return;
-    }
+  const createPlaceholderImage = (color: string, text: string, mood: string) => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
+      <defs><linearGradient id="bg"><stop offset="0%" style="stop-color:${color}"/><stop offset="100%" style="stop-color:#000"/></linearGradient></defs>
+      <rect width="1920" height="1080" fill="url(#bg)"/>
+      <rect x="100" y="100" width="1720" height="600" rx="20" fill="rgba(255,255,255,0.05)"/>
+      <text x="960" y="350" text-anchor="middle" fill="white" font-size="72" font-family="sans-serif" font-weight="bold">${text}</text>
+      <text x="960" y="430" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="28" font-family="sans-serif">🎬 ${mood} · 16:9</text>
+      <text x="960" y="1000" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="18">龙虾短剧工坊 · 演示画面</text>
+    </svg>`;
+    return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
+  };
 
-    setStep('collecting');
-    setProgress(0);
-    setError('');
-    setProgressMsg('🎬 开始合成...');
-
-    // Filter scenes that have images
+  const startFullPipeline = async () => {
     const validScenes = scenes.filter(s => s.imageDataUrl);
     if (validScenes.length === 0) {
-      setError('没有已生成画面的分镜，请先去分镜板生成画面');
-      setStep('error');
+      setError('没有已生成画面的分镜，请先加载演示数据');
       return;
     }
 
-    setStep('composing');
+    setError('');
+    setProgress(0);
+    setStep('preparing');
+    setProgressMsg('🎬 开始全自动管线...');
+    setOutputPath('');
 
-    const result = await ai.composeVideo({
-      scenes: validScenes.map(s => ({
-        imageDataUrl: s.imageDataUrl,
-        audioDataUrl: s.audioDataUrl || '',
-        duration: s.duration || 4,
-      })),
-      outputName: `${projectName || 'output'}_${Date.now()}.mp4`,
-    });
+    try {
+      // Step 1: Generate BGM
+      let bgmDataUrl = '';
+      if (bgmEnabled) {
+        setStep('bgm');
+        setProgress(20);
+        setProgressMsg('🎵 AI 正在生成背景配乐...');
+        const bgmResult = await bgm.generate(validScenes);
+        if (bgmResult.success && bgmResult.data) {
+          bgmDataUrl = bgmResult.data.bgmDataUrl;
+          setProgressMsg('✅ 背景配乐生成完成');
+        } else {
+          console.warn('BGM generation failed, continuing without');
+        }
+      }
 
-    if (result.success && result.data) {
-      setOutputPath(result.data.outputPath);
-      setStep('done');
+      // Step 2: Generate SRT subtitles
+      setProgress(40);
+      setProgressMsg('📝 正在生成字幕...');
+      let subtitleContent = '';
+      if (subtitleFormat === 'srt') {
+        subtitleContent = await subtitle.generateSRT(validScenes);
+      } else if (subtitleFormat === 'ass') {
+        subtitleContent = await subtitle.generateASS(validScenes);
+      }
+      setProgressMsg('✅ 字幕生成完成');
+
+      // Step 3: Compose video
+      setStep('composing');
+      setProgress(60);
+      setProgressMsg('⚡ 正在合成视频 (1920×1080, H.264)...');
+
+      const composeResult = await ai.composeVideo({
+        scenes: validScenes.map(s => ({
+          imageDataUrl: s.imageDataUrl,
+          audioDataUrl: s.audioDataUrl || '',
+          duration: s.duration || 4,
+        })),
+        bgmDataUrl: bgmDataUrl || undefined,
+        outputName: `${projectName || 'output'}_${Date.now()}.mp4`,
+        subtitleContent: subtitleContent || undefined,
+      });
+
+      if (composeResult.success && composeResult.data) {
+        setProgress(85);
+        setOutputPath(composeResult.data.outputPath);
+        setProgressMsg('✅ 视频合成完成！');
+      } else {
+        throw new Error(composeResult.error || '合成失败');
+      }
+
+      // Step 4: Export drafts (optional)
+      if (draftExport === 'capcut' || draftExport === 'both') {
+        setProgress(90);
+        setProgressMsg('📦 正在导出剪映草稿...');
+        const draftResult = await draft.exportCapCut({
+          title: projectName,
+          scenes: validScenes,
+        }, validScenes.map(s => ({
+          dialogue: s.dialogue,
+          duration: s.duration,
+        })));
+        if (draftResult.success) {
+          setProgressMsg('✅ 剪映草稿导出成功！');
+        }
+      }
+
+      if (draftExport === 'fcpxml' || draftExport === 'both') {
+        setProgress(95);
+        setProgressMsg('📦 正在导出 FCPXML...');
+        const xmlResult = await draft.exportFCPXML({
+          title: projectName,
+        }, validScenes.map(s => ({
+          dialogue: s.dialogue,
+          duration: s.duration,
+        })));
+        if (xmlResult.success) {
+          setProgressMsg('✅ FCPXML 导出成功！');
+        }
+      }
+
       setProgress(100);
-      setProgressMsg('✅ 短剧合成完成！');
-    } else {
+      setStep('done');
+      setProgressMsg('✅ 全部完成！视频已就绪');
+      loadOutputs();
+
+    } catch (e: any) {
       setStep('error');
-      setError(result.error || '合成失败');
+      setError(e.message || '处理流程出错');
       setProgressMsg('');
     }
   };
 
-  // Demo: generate dummy scenes for testing
-  const loadDemo = async () => {
-    setProgressMsg('生成演示数据...');
-    const demoScenes: Scene[] = [
-      { id: 'd1', index: 0, location: '办公室·白天', description: '霸道总裁站在窗前', dialogue: [{ characterId: 'c1', characterName: '林总', line: '这份合同，我签了。', emotion: '冷峻' }], cameraAngle: '中景', mood: '紧张', imagePrompt: 'Boss in office', imageUrl: '', videoUrl: '' },
-      { id: 'd2', index: 1, location: '咖啡厅·傍晚', description: '男女主第一次见面', dialogue: [{ characterId: 'c2', characterName: '小美', line: '你好，请问是林总吗？', emotion: '紧张' }], cameraAngle: '特写', mood: '浪漫', imagePrompt: 'Cafe date', imageUrl: '', videoUrl: '' },
-      { id: 'd3', index: 2, location: '天台·夜晚', description: '浪漫表白的场景', dialogue: [{ characterId: 'c1', characterName: '林总', line: '我喜欢的，从始至终只有你。', emotion: '深情' }], cameraAngle: '全景', mood: '浪漫', imagePrompt: 'Rooftop romance', imageUrl: '', videoUrl: '' },
-    ];
-
-    // Generate placeholder images (colored blocks with text)
-    const pipelineScenes: PipelineScene[] = demoScenes.map((scene, i) => {
-      // Create a simple SVG-based data URL as placeholder image
-      const colors = ['#e84142', '#4a6cf7', '#10b981'];
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
-        <rect width="1920" height="1080" fill="${colors[i]}"/>
-        <text x="960" y="520" text-anchor="middle" fill="white" font-size="48" font-family="sans-serif">Scene ${i+1}: ${scene.location}</text>
-        <text x="960" y="580" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="24">${scene.mood} · ${scene.cameraAngle}</text>
-      </svg>`;
-      const b64 = Buffer.from(svg).toString('base64');
-      return {
-        scene,
-        imageDataUrl: 'data:image/svg+xml;base64,' + b64,
-        audioDataUrl: '',
-        duration: 4,
-      };
-    });
-
-    setScenes(pipelineScenes);
-    setProjectName('霸道总裁爱上我（演示）');
-    setProgressMsg('✅ 加载了 ' + pipelineScenes.length + ' 个分镜（演示画面）');
-    setTimeout(() => setProgressMsg(''), 3000);
-  };
-
   const clearPipeline = () => {
     setScenes([]);
-    setStep('preparing');
+    setStep('idle');
     setOutputPath('');
     setError('');
     setProgress(0);
@@ -140,74 +192,66 @@ const PipelinePage: React.FC = () => {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
+  const steps = [
+    { key: 'bgm', label: '配乐生成', icon: '🎵', done: step !== 'idle' },
+    { key: 'subs', label: '字幕生成', icon: '📝', done: step !== 'idle' },
+    { key: 'compose', label: '合成编码', icon: '⚡', done: step === 'composing' || step === 'done' },
+    { key: 'output', label: '视频输出', icon: '🎬', done: step === 'done' },
+    { key: 'export', label: '剪辑导出', icon: '📦', done: step === 'done' },
+  ];
+
   return (
-    <div className="animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+    <div className="animate-fade-in page-container">
+      {/* Header */}
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>⚡ 合成管线</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            将分镜画面 + 配音合成为 MP4 视频
-          </p>
+          <h1>⚡ 合成管线</h1>
+          <p>配乐生成 → 字幕 → 视频合成 → 导出到剪辑软件 — 全自动</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {scenes.length === 0 && (
-            <button onClick={loadDemo}
-              style={{
-                padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)',
-                background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13,
-              }}>
-              🎲 加载演示
-            </button>
+            <button className="btn-secondary" onClick={loadDemo}>🎲 加载演示</button>
           )}
           {scenes.length > 0 && (
-            <button onClick={clearPipeline}
-              style={{
-                padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)',
-                background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13,
-              }}>
-              🔄 重置
-            </button>
+            <button className="btn-ghost" onClick={clearPipeline}>🔄 重置</button>
           )}
         </div>
       </div>
 
+      {/* Progress message */}
       {progressMsg && (
-        <div style={{
-          marginBottom: 16, padding: '8px 14px', borderRadius: 8,
-          background: progressMsg.includes('✅') ? '#10b98122' : progressMsg.includes('❌') ? '#e8414222' : 'var(--bg-tertiary)',
-          border: `1px solid ${progressMsg.includes('✅') ? '#10b981' : progressMsg.includes('❌') ? '#e84142' : 'var(--border)'}`,
-          fontSize: 13, color: progressMsg.includes('✅') ? '#10b981' : progressMsg.includes('❌') ? '#ff6b6b' : 'var(--text-secondary)',
+        <div className="card" style={{
+          marginBottom: 16, padding: 12,
+          background: progressMsg.includes('✅') ? '#10b98111' : progressMsg.includes('❌') ? '#e8414211' : 'var(--bg-secondary)',
+          borderColor: progressMsg.includes('✅') ? 'rgba(16,185,129,0.3)' : progressMsg.includes('❌') ? 'rgba(232,65,66,0.3)' : 'var(--border)',
         }}>
-          {progressMsg}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+            {!progressMsg.includes('✅') && !progressMsg.includes('❌') && (
+              <span className="animate-spin" style={{ fontSize: 16 }}>⏳</span>
+            )}
+            {progressMsg}
+          </div>
         </div>
       )}
 
       {/* Pipeline visualization */}
-      <div style={{
-        background: 'var(--bg-tertiary)', border: '1px solid var(--border)',
-        borderRadius: 12, padding: 24, marginBottom: 20,
-      }}>
+      <div className="card" style={{ marginBottom: 20 }}>
         <div style={{
-          display: 'flex', gap: 4, alignItems: 'center',
-          justifyContent: 'space-between', marginBottom: 20,
+          display: 'flex', gap: 0, alignItems: 'center', marginBottom: 20,
         }}>
-          {[
-            { label: '分镜画面', icon: '🖼️', done: step !== 'preparing' },
-            { label: '配音音频', icon: '🎙️', done: scenes.some(s => s.audioDataUrl) },
-            { label: '合成编码', icon: '⚡', done: step === 'composing' || step === 'done' },
-            { label: 'MP4 输出', icon: '🎬', done: step === 'done' },
-          ].map((item, i) => (
-            <React.Fragment key={item.label}>
+          {steps.map((item, i) => (
+            <React.Fragment key={item.key}>
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                 flex: 1, padding: '8px',
               }}>
                 <div style={{
-                  width: 40, height: 40, borderRadius: '50%',
+                  width: 44, height: 44, borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 20,
-                  background: item.done ? 'var(--accent)22' : 'var(--bg-secondary)',
+                  fontSize: 22,
+                  background: item.done ? 'linear-gradient(135deg, rgba(232,65,66,0.2), rgba(255,107,107,0.3))' : 'var(--bg-secondary)',
                   border: `2px solid ${item.done ? 'var(--accent)' : 'var(--border)'}`,
+                  transition: 'all 0.5s',
                 }}>
                   {item.done ? '✅' : item.icon}
                 </div>
@@ -218,10 +262,11 @@ const PipelinePage: React.FC = () => {
                   {item.label}
                 </div>
               </div>
-              {i < 3 && (
+              {i < steps.length - 1 && (
                 <div style={{
-                  flex: 1, height: 2,
-                  background: item.done ? 'var(--accent)' : 'var(--border)',
+                  flex: 1, height: 3,
+                  background: item.done ? 'linear-gradient(90deg, var(--accent), var(--accent))' : 'var(--border)',
+                  borderRadius: 2, transition: 'background 1s',
                 }} />
               )}
             </React.Fragment>
@@ -229,30 +274,55 @@ const PipelinePage: React.FC = () => {
         </div>
 
         {/* Progress bar */}
-        {(step === 'composing') && (
-          <div style={{
-            width: '100%', height: 6, borderRadius: 3,
-            background: 'var(--bg-secondary)', overflow: 'hidden', marginBottom: 16,
-          }}>
-            <div style={{
-              width: `${progress || 30}%`, height: '100%',
-              background: 'linear-gradient(90deg, #e84142, #ff6b6b)',
-              borderRadius: 3, transition: 'width 1s ease',
-            }} />
+        {progress > 0 && progress < 100 && (
+          <div className="progress-bar" style={{ marginBottom: 16 }}>
+            <div className="progress-bar-fill" style={{ width: progress + '%' }} />
           </div>
         )}
 
+        {/* Options row */}
+        <div style={{
+          display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center',
+          padding: '12px 0', borderTop: '1px solid var(--border)', marginBottom: 12,
+        }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+            <input type="checkbox" checked={bgmEnabled} onChange={e => setBgmEnabled(e.target.checked)}
+              style={{ accentColor: 'var(--accent)' }} />
+            🎵 自动生成背景配乐
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+            <span>📝 字幕格式:</span>
+            <select value={subtitleFormat} onChange={e => setSubtitleFormat(e.target.value)}
+              style={{ fontSize: 12, padding: '4px 8px', borderRadius: 4 }}>
+              <option value="srt">SRT</option>
+              <option value="ass">ASS（带样式）</option>
+              <option value="">无字幕</option>
+            </select>
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+            <span>📦 导出到:</span>
+            <select value={draftExport} onChange={e => setDraftExport(e.target.value)}
+              style={{ fontSize: 12, padding: '4px 8px', borderRadius: 4 }}>
+              <option value="none">不导出</option>
+              <option value="capcut">剪映草稿</option>
+              <option value="fcpxml">Premiere/FCPXML</option>
+              <option value="both">两者都导出</option>
+            </select>
+          </label>
+        </div>
+
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
           {scenes.length > 0 && (
-            <button onClick={startComposition} disabled={step === 'composing'}
+            <button onClick={startFullPipeline} disabled={step === 'composing'}
+              className="btn-primary"
               style={{
-                padding: '12px 32px', borderRadius: 10, border: 'none',
-                background: step === 'composing' ? 'var(--border)' : 'linear-gradient(135deg, #e84142, #ff6b6b)',
-                color: '#fff', fontSize: 16, fontWeight: 600,
-                cursor: step === 'composing' ? 'not-allowed' : 'pointer',
                 opacity: step === 'composing' ? 0.6 : 1,
+                cursor: step === 'composing' ? 'not-allowed' : 'pointer',
+                fontSize: 16, padding: '14px 48px',
               }}>
-              {step === 'composing' ? '⏳ 合成中...' : '🎬 一键合成成片'}
+              {step === 'composing' ? '⏳ 全自动处理中...' : '🎬 全自动一条龙'}
             </button>
           )}
 
@@ -260,13 +330,8 @@ const PipelinePage: React.FC = () => {
             <button onClick={() => {
               const electron: any = (window as any).electronAPI;
               if (electron?.saveFile) electron.saveFile(outputPath.split('/').pop() || 'output.mp4');
-            }}
-              style={{
-                padding: '12px 32px', borderRadius: 10, border: '1px solid var(--accent)',
-                background: 'var(--accent)22', color: 'var(--accent)',
-                fontSize: 16, fontWeight: 600, cursor: 'pointer',
-              }}>
-              💾 保存到本地
+            }} className="btn-primary" style={{ background: '#10b981', boxShadow: '0 2px 12px rgba(16,185,129,0.3)' }}>
+              💾 保存视频
             </button>
           )}
         </div>
@@ -274,19 +339,16 @@ const PipelinePage: React.FC = () => {
 
       {/* Scene list */}
       {scenes.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10 }}>
+        <div className="stagger" style={{ marginBottom: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 12 }}>
             {projectName} · {scenes.length} 个分镜
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {scenes.map((ps, i) => (
-              <div key={ps.scene.id} style={{
-                background: 'var(--bg-tertiary)', border: '1px solid var(--border)',
-                borderRadius: 10, padding: 12, display: 'flex', alignItems: 'center', gap: 12,
-              }}>
+              <div key={ps.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12 }}>
                 <div style={{
-                  width: 80, height: 45, borderRadius: 6, overflow: 'hidden',
-                  background: 'var(--bg-secondary)', flexShrink: 0,
+                  width: 90, height: 50, borderRadius: 6, overflow: 'hidden',
+                  background: 'var(--bg-secondary)', flexShrink: 0, position: 'relative',
                 }}>
                   {ps.imageDataUrl ? (
                     <img src={ps.imageDataUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -295,22 +357,31 @@ const PipelinePage: React.FC = () => {
                       无画面
                     </div>
                   )}
+                  <div style={{
+                    position: 'absolute', top: 3, left: 3, fontSize: 10,
+                    background: 'rgba(0,0,0,0.7)', padding: '1px 6px', borderRadius: 3,
+                    color: '#fff',
+                  }}>
+                    #{i + 1}
+                  </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>
-                    #{i + 1} {ps.scene.location}
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{ps.location}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 8 }}>
+                    <span>🎬 {ps.cameraAngle}</span>
+                    <span>🎭 {ps.mood}</span>
+                    <span>⏱ {ps.duration}s</span>
+                    {ps.audioDataUrl ? <span>🎙️ 有配音</span> : null}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    {ps.audioDataUrl ? '🎙️ 有配音' : '🔇 无配音'} · {ps.duration}s
-                  </div>
+                  {ps.dialogue && ps.dialogue.length > 0 && (
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, opacity: 0.7 }}>
+                      {ps.dialogue.map(d => d.line).join(' · ').substring(0, 60)}
+                      {ps.dialogue.map(d => d.line).join(' · ').length > 60 ? '...' : ''}
+                    </div>
+                  )}
                 </div>
-                <div style={{
-                  width: 40, height: 40, borderRadius: '50%',
-                  background: ps.imageDataUrl ? '#10b98122' : 'var(--bg-secondary)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 16,
-                }}>
-                  {ps.imageDataUrl ? '✅' : '❌'}
+                <div className={`badge ${ps.imageDataUrl ? 'badge-success' : 'badge-warning'}`}>
+                  {ps.imageDataUrl ? '✅ 就绪' : '⏳ 待处理'}
                 </div>
               </div>
             ))}
@@ -322,7 +393,7 @@ const PipelinePage: React.FC = () => {
       {error && (
         <div style={{
           marginBottom: 20, padding: 12, borderRadius: 8,
-          background: '#e8414222', border: '1px solid #e84142',
+          background: 'rgba(232,65,66,0.1)', border: '1px solid rgba(232,65,66,0.3)',
           fontSize: 13, color: '#ff6b6b',
         }}>
           ❌ {error}
@@ -331,22 +402,19 @@ const PipelinePage: React.FC = () => {
 
       {/* Previous outputs */}
       {outputs.length > 0 && (
-        <div style={{
-          background: 'var(--bg-tertiary)', border: '1px solid var(--border)',
-          borderRadius: 12, padding: 20,
-        }}>
-          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10 }}>
+        <div className="card" style={{ marginTop: 12 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 12 }}>
             📁 历史输出 ({outputs.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {outputs.map((o: any, i: number) => (
+            {outputs.slice(0, 10).map((o: any, i: number) => (
               <div key={i} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '8px 12px', borderRadius: 6,
                 background: 'var(--bg-secondary)', fontSize: 12,
               }}>
-                <span style={{ color: 'var(--text-primary)' }}>{o.name}</span>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-primary)' }}>🎬 {o.name}</span>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                   <span style={{ color: 'var(--text-muted)' }}>{formatFileSize(o.size)}</span>
                   <span style={{ color: 'var(--text-muted)' }}>{new Date(o.createdAt).toLocaleTimeString()}</span>
                   <span style={{ color: 'var(--accent)', cursor: 'pointer' }}>📂</span>

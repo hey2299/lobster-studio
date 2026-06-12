@@ -62,6 +62,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // TTS
   aiGenerateTTS: (text, voiceType) => ipcRenderer.invoke('ai:generateTTS', text, voiceType),
+
+  // BGM
+  bgmGenerate: (scenes, moodOverrides) => ipcRenderer.invoke('bgm:generate', scenes, moodOverrides),
+
+  // Subtitles
+  subtitleGenerateSRT: (scenes) => ipcRenderer.invoke('subtitle:generateSRT', scenes),
+  subtitleGenerateASS: (scenes, options) => ipcRenderer.invoke('subtitle:generateASS', scenes, options),
+
+  // Draft Export
+  draftExportCapCut: (project, scenes, options) => ipcRenderer.invoke('draft:exportCapCut', project, scenes, options),
+  draftExportFCPXML: (project, scenes, options) => ipcRenderer.invoke('draft:exportFCPXML', project, scenes, options),
+  draftExportSubtitles: (scenes, options) => ipcRenderer.invoke('draft:exportSubtitles', scenes, options),
 });
 
 // Listen for main process events
