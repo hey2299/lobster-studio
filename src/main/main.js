@@ -231,26 +231,28 @@ function registerIpcHandlers() {
   ipcMain.handle('license:editions', async () => getEditionInfo());
   ipcMain.handle('license:checkFeature', async (_, feature) => checkFeature(feature));
 
-  // === Auto-Detect Engine ===
-  ipcMain.handle('autodetect:allPlatforms', async () => {
-    return getAllPlatformRules();
+  const ad = require('./auto-detect');
+
+  // === Auto-Detect Engine (Dual Mode) ===
+  ipcMain.handle('autodetect:allPlatforms', async (_, mode) => {
+    return ad.getAllPlatformRules(mode || '');
   });
 
   ipcMain.handle('autodetect:platformRules', async (_, platformId) => {
-    return getPlatformRules(platformId);
+    return ad.getPlatformRules(platformId);
   });
 
   ipcMain.handle('autodetect:analyze', async (_, script, options) => {
-    return analyzeScriptForPlatforms(script, options || {});
+    return ad.analyzeScriptForPlatforms(script, options || {});
   });
 
   ipcMain.handle('autodetect:optimize', async (_, platformId, options) => {
-    return generateOptimizedParams(platformId, options || {});
+    return ad.generateOptimizedParams(platformId, options || {});
   });
 
   ipcMain.handle('autodetect:adaptScript', async (_, script, platformId, options) => {
     try {
-      const adapted = adaptScriptForPlatform(script, platformId, options || {});
+      const adapted = ad.adaptScriptForPlatform(script, platformId, options || {});
       return { success: true, data: adapted };
     } catch (e) {
       return { success: false, error: e.message };
@@ -258,7 +260,15 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle('autodetect:hashtags', async (_, platformId, genre, style) => {
-    return generateHashtags(platformId, genre, style);
+    return ad.generateHashtags(platformId, genre, style);
+  });
+
+  ipcMain.handle('autodetect:regionSummary', async (_, mode) => {
+    return ad.getRegionSummary(mode || 'domestic');
+  });
+
+  ipcMain.handle('autodetect:region', async (_, platformId) => {
+    return ad.getPlatformRegion(platformId);
   });
 
   // Publish (Phase 3)

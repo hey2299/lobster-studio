@@ -53,13 +53,15 @@ declare global {
       draftExportCapCut: (project: any, scenes: any[], options?: any) => Promise<{ success: boolean; data?: { draftDir: string }; error?: string }>;
       draftExportFCPXML: (project: any, scenes: any[], options?: any) => Promise<{ success: boolean; data?: { xml: string }; error?: string }>;
       draftExportSubtitles: (scenes: any[], options?: any) => Promise<string>;
-      // AutoDetect
-      autodetectAllPlatforms: () => Promise<Record<string,any>>;
+      // AutoDetect (Dual Mode)
+      autodetectAllPlatforms: (mode?: string) => Promise<Record<string,any>>;
       autodetectPlatformRules: (id: string) => Promise<any>;
       autodetectAnalyze: (script: any, options?: any) => Promise<Record<string,any>>;
       autodetectOptimize: (id: string, options?: any) => Promise<any>;
       autodetectAdaptScript: (script: any, id: string, options?: any) => Promise<{ success: boolean; data?: any; error?: string }>;
       autodetectHashtags: (id: string, genre?: string, style?: string) => Promise<string[]>;
+      autodetectRegionSummary: (mode: string) => Promise<any[]>;
+      autodetectRegion: (id: string) => Promise<string | null>;
     };
   }
 }
@@ -104,6 +106,8 @@ export const autodetect = {
     api?.autodetectAdaptScript(script, id, options) ?? Promise.resolve({ success: false }),
   hashtags: (id: string, genre?: string, style?: string) =>
     api?.autodetectHashtags(id, genre, style) ?? Promise.resolve([]),
+  regionSummary: (mode: string) => api?.autodetectRegionSummary(mode) ?? Promise.resolve([]),
+  region: (id: string) => api?.autodetectRegion(id) ?? Promise.resolve(null),
 };
 
 export const draft = {

@@ -38,6 +38,7 @@ const PublishPage: React.FC = () => {
   const [autoAnalysis, setAutoAnalysis] = useState<any>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [detectMode, setDetectMode] = useState<'domestic' | 'overseas'>('domestic');
   const [metadata, setMetadata] = useState({
     title: '',
     description: '',
@@ -59,7 +60,6 @@ const PublishPage: React.FC = () => {
     setOutputs(o);
     setHistory(h);
 
-    // Auto-run analysis once
     runAutoAnalysis();
   };
 
@@ -114,7 +114,8 @@ const PublishPage: React.FC = () => {
     }
   };
 
-  const runAutoAnalysis = async () => {
+  const runAutoAnalysis = async (mode?: string) => {
+    const targetMode = mode || detectMode;
     if (analyzing) return;
     setAnalyzing(true);
     try {
@@ -129,14 +130,15 @@ const PublishPage: React.FC = () => {
           totalDuration,
           sceneCount: (data.scenes || []).length,
           aspectRatio: '9:16',
+          mode: targetMode,
         });
         setAutoAnalysis(analysis);
       } else {
-        // Default analysis for generic drama
         const analysis = await autodetect.analyze({ title: '默认' }, {
-          totalDuration: 120,
-          sceneCount: 8,
+          totalDuration: targetMode === 'overseas' ? 45 : 120,
+          sceneCount: targetMode === 'overseas' ? 6 : 8,
           aspectRatio: '9:16',
+          mode: targetMode,
         });
         setAutoAnalysis(analysis);
       }
@@ -280,10 +282,36 @@ const PublishPage: React.FC = () => {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ fontSize: 14, fontWeight: 600 }}>🔍 自动检测平台规则</div>
-            <button onClick={() => setAnalysisOpen(!analysisOpen)}
-              className="btn-ghost" style={{ fontSize: 12 }}>
-              {analysisOpen ? '收起' : '展开'} {autoAnalysis ? `(${Object.values(autoAnalysis).filter((a:any)=>a.recommended).length}/6 推荐)` : ''}
-            </button>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {/* Mode switch */}
+              <div style={{
+                display: 'flex', background: 'var(--bg-secondary)', borderRadius: 6, padding: 2,
+                border: '1px solid var(--border)',
+              }}>
+                <button onClick={() => { setDetectMode('domestic'); setAnalysisOpen(true); setAutoAnalysis(null); setTimeout(() => runAutoAnalysis('domestic'), 100); }}
+                  style={{
+                    padding: '4px 12px', borderRadius: 5, border: 'none', cursor: 'pointer', fontSize: 11,
+                    background: detectMode === 'domestic' ? 'var(--accent)' : 'transparent',
+                    color: detectMode === 'domestic' ? '#fff' : 'var(--text-secondary)',
+                    fontWeight: detectMode === 'domestic' ? 600 : 400,
+                  }}>
+                  🇨🇳 国内
+                </button>
+                <button onClick={() => { setDetectMode('overseas'); setAnalysisOpen(true); setAutoAnalysis(null); setTimeout(() => runAutoAnalysis('overseas'), 100); }}
+                  style={{
+                    padding: '4px 12px', borderRadius: 5, border: 'none', cursor: 'pointer', fontSize: 11,
+                    background: detectMode === 'overseas' ? 'var(--accent)' : 'transparent',
+                    color: detectMode === 'overseas' ? '#fff' : 'var(--text-secondary)',
+                    fontWeight: detectMode === 'overseas' ? 600 : 400,
+                  }}>
+                  🌍 海外
+                </button>
+              </div>
+              <button onClick={() => setAnalysisOpen(!analysisOpen)}
+                className="btn-ghost" style={{ fontSize: 12, padding: '4px 8px' }}>
+                {analysisOpen ? '▲' : '▼'} {autoAnalysis ? `${Object.values(autoAnalysis).filter((a:any)=>a.recommended).length}/${Object.keys(autoAnalysis).length}` : ''}
+              </button>
+            </div>
           </div>
 
           {analysisOpen && (
