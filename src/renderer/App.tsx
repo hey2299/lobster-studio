@@ -17,6 +17,21 @@ const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const [initialized, setInitialized] = useState(false);
   const [stats, setStats] = useState({ projects: 0, characters: 0 });
+  const [theme, setTheme] = useState<string>('dark');
+
+  // Load saved theme
+  useEffect(() => {
+    const saved = localStorage.getItem('lobster-theme') || 'dark';
+    setTheme(saved);
+    document.documentElement.setAttribute('data-theme', saved);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('lobster-theme', next);
+  };
 
   useEffect(() => {
     // Load saved data on startup
@@ -25,7 +40,7 @@ const App: React.FC = () => {
         const chars = await db.getCharacters();
         const projects = await db.getProjects();
         setStats({ projects: projects.length, characters: chars.length });
-        
+
         // Configure AI with defaults (user can change in settings)
         await ai.configure('deepseek', '', 'deepseek-chat');
       } catch (e) {
@@ -54,6 +69,19 @@ const App: React.FC = () => {
     <div style={{ display: 'flex', height: '100vh', flexDirection: 'column' }}>
       <div className="titlebar">
         <span className="titlebar-title">🦞 龙虾短剧工坊 {initialized ? '' : '— 启动中...'}</span>
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={toggleTheme}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 16, padding: '2px 8px', borderRadius: 4,
+            WebkitAppRegion: 'no-drag',
+            color: '#8888aa',
+          }}
+          title={theme === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
       </div>
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar activePage={activePage} onNavigate={setActivePage} />

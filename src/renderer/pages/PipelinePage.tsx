@@ -145,11 +145,6 @@ const PipelinePage: React.FC = () => {
       setProgress(60);
       setProgressMsg('⚡ 正在合成视频 (1920×1080, H.264)...');
 
-      // Step 4: Compose video
-      setStep('composing');
-      setProgress(60);
-      setProgressMsg('⚡ 正在合成视频 (1920×1080, H.264)...');
-
       const composeResult = await ai.composeVideo({
         scenes: composeScenes.map(s => ({
           imageDataUrl: s.imageDataUrl,
