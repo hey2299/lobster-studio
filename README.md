@@ -1,114 +1,176 @@
-# 龙虾短剧工坊 · 用户指南
+# 🦞 龙虾短剧工坊 — Lobster Studio
 
-## 第一步：配置 API 密钥
-
-### 推荐方案：DeepSeek（完全免费，国内可用）
-
-1. 打开软件 → 点击左侧 **设置** ⚙️
-2. 在 "AI 供应商" 选择 **DeepSeek**
-3. 去 [platform.deepseek.com](https://platform.deepseek.com) 注册 → 创建 API Key
-4. 把 `sk-...` 复制到 "API Key" 输入框 → 点击 **💾 保存设置**
-5. 点击 **🔌 测试连接** 确认可用
-
-> **备选方案：** SiliconFlow（国内可用，支持图像生成）
-> 1. 注册 [siliconflow.cn](https://siliconflow.cn) → 获取 API Key
-> 2. 设置中选择 SiliconFlow → 填写 Key → 模型选 `deepseek-ai/DeepSeek-V3`
-
-### 图像生成（可选）
-
-- 在**图像供应商**选择 **SiliconFlow**（国内可用，速度快）
-- 去硅基流动控制台 → 创建 API Key
-- 或选择 OpenAI（需要海外网络 + DALL-E 3 额度）
-
-### TTS 配音（可选）
-
-- 使用 **SiliconFlow** Fish Speech 1.5 模型
-- 或 OpenAI TTS（需要海外网络）
+> **AI 驱动的短剧创作全栈工具**
+> 从角色设定到多平台发布，一条龙完成。
 
 ---
 
-## 第二步：快速制作一条短剧
+## 📦 项目结构
 
-### 方法 A：全自动模式
+```
+lobster-studio/
+├── src/
+│   ├── main/                    # Electron 主进程 (Node.js 模块)
+│   │   ├── main.js              #  Electron 入口 + 全部 IPC handler
+│   │   ├── preload.js           #  安全 Bridge，暴露 electronAPI
+│   │   ├── database.js          #  持久化层 (sql.js / SQLite WASM)
+│   │   ├── ai-engine.js         #  AI API 调用层 (DeepSeek/OpenAI/SiliconFlow/GLM)
+│   │   ├── vector-memory.js     #  128维向量检索引擎 (余弦相似度)
+│   │   ├── license.js           #  授权系统 (社区/专业/永久)
+│   │   ├── bgm-engine.js        #  背景配乐生成 (Web Audio API)
+│   │   ├── subtitle-engine.js   #  字幕生成 (SRT/ASS)
+│   │   ├── draft-export.js      #  剪辑软件导出 (CapCut/FCPXML/ASS)
+│   │   ├── translation.js       #  翻译引擎 (50种语言，AI驱动)
+│   │   ├── auto-detect.js       #  平台自适应检测 (13平台双模式)
+│   │   ├── publish-engine.js    #  一键发布引擎 (国内+海外)
+│   │   ├── video-composer.js    #  视频合成 (FFmpeg WASM)
+│   │   ├── git-sync.js          #  Git 远程备份
+│   │   ├── project-pack.js      #  项目打包 (.lspack)
+│   │   ├── user-account.js      #  用户账户系统
+│   │   └── web-fetch-shim.js    #  Web 请求垫片
+│   └── renderer/                # React 渲染进程
+│       ├── App.tsx              #  路由 + 主题切换
+│       ├── main.tsx             #  React 入口
+│       ├── index.html           #  HTML 模板
+│       ├── index.css            #  全局样式 (暗/亮双主题 + 响应式)
+│       ├── lib/bridge.ts        #  IPC Bridge 封装 (全类型安全)
+│       ├── components/
+│       │   ├── Sidebar.tsx      #  导航侧边栏 (响应式折叠)
+│       │   └── TopBar.tsx       #  顶部面包屑
+│       └── pages/
+│           ├── DashboardPage.tsx    # 工作台 (统计 + 快捷操作)
+│           ├── ScriptFactoryPage.tsx # 剧本工厂
+│           ├── CharacterWorkshopPage.tsx # 角色工坊
+│           ├── StoryboardPage.tsx    # 分镜面板
+│           ├── VoiceStudioPage.tsx   # 音色工坊
+│           ├── PipelinePage.tsx      # 合成管线 (全自动)
+│           ├── PublishPage.tsx       # 一键发布
+│           └── SettingsPage.tsx      # 设置 (AI/授权/翻译/Git)
+├── scripts/                    # 工具脚本
+│   ├── self-test.js            #  离线自测 (14模块, 64断言)
+│   ├── e2e-test.js             #  E2E离线测试 (12模块)
+│   ├── e2e-live-test.js        #  全链路在线测试 (需 API Key)
+│   ├── build-installer.js      #  安装包构建
+│   ├── build-mobile.js         #  手机版构建
+│   ├── pack.js                 #  便携版打包
+│   └── demo-pipeline.js        #  演示管线
+├── knowledge-base/             # 知识库
+│   └── known-errors.md         #  缺陷分类 [ACTIVE]/[FLAG]/[FIXED]
+├── public/                     # 静态资源
+│   ├── sw.js                   #  Service Worker
+│   ├── manifest.json           #  PWA Manifest
+│   └── LIVE-TEST-GUIDE.md      #  全链路在线测试指南
+├── release/                    # 构建产物
+│   ├── LobsterStudio-win32-x64/ # 便携版 (190MB)
+│   ├── installer/               # 安装包 (311MB)
+│   └── mobile/                  # 手机版
+└── vite.config.js              # Vite 构建配置
+```
 
-1. 📝 **剧本工厂** → 选择 "AI 一键生成"
-2. 填写：题材（如"霸道总裁爱上我"）、风格（如"甜宠"）、时长（60秒）
-3. 点击 **✨ 一键生成** → 等待生成
-4. 生成后点击 **📌 记住角色**（角色自动存入向量记忆库）
+## 🚀 快速开始
 
-### 方法 B：手动模式
+### 前置条件
+- **Node.js** ≥ 18 (已安装 v22.19.0)
+- **npm** (已安装 10.9.3)
+- 可选：**API Key** (推荐 DeepSeek，国内可用)
 
-1. 🎭 **人物工坊** → 创建角色（填写性格、外貌、声线）
-2. 📝 **剧本工厂** → 选择 "AI 辅助创作" → 写梗概 → AI 扩展为完整分镜
-3. 创建角色时自动检测与已有角色的相似度，提示复用
+### 开发
+```bash
+# 安装依赖（已完成）
+npm install
 
-### 进入分镜板
+# 前端开发（Vite HMR）
+npx vite --config vite.config.js
 
-- 点击生成的剧本 → **进入分镜板** 🎬
-- 每个场景显示：位置、对话、相机角度
-- 点击 **🖼️ 生成此画面**（单张）或 **🎨 一键生成全部画面**
-- 点击 **🎙️ 配音** 生成对话语音
+# 构建前端
+npx vite build --config vite.config.js
 
-### 合成视频
+# 启动 Electron（需要 display server）
+npx electron .
+```
 
-- 点击左侧 **⚡ 合成管线**
-- 选择分镜 → 确认所有场景都有画面
-- 点击 **🎬 一键合成成片**
-- 等待 FFmpeg 处理完成 → 点击 **💾 保存到本地**
+### 测试
+```bash
+# 离线模块测试 (14模块, 无需API Key)
+node scripts/self-test.js
 
-### 发布
+# 全链路在线测试 (需 API Key)
+set DEEPSEEK_API_KEY=sk-xxx && node scripts/e2e-live-test.js
+```
 
-- 点击 **🚀 一键发布**
-- 选择要发布的视频
-- 填写标题、描述、标签
-- 选择平台发布
+### 构建
+```bash
+# 便携版
+node scripts/pack.js
 
----
+# 安装包
+node scripts/build-installer.js
 
-## 第三步：高级功能
+# 手机版
+node scripts/build-mobile.js
+```
 
-### 跨短剧角色记忆
+## 🧪 测试覆盖 (64/64 通过)
 
-创建角色时，系统自动在向量记忆库中搜索相似角色。
-- 相似度 > 0.8：高度匹配 → 建议直接复用
-- 相似度 > 0.5：可能匹配 → 提示检查
-- 低分 → 可安心创建新角色
+| 模块 | 断言数 | 状态 |
+|------|--------|------|
+| database.js | 7 | ✅ |
+| vector-memory.js | 5 | ✅ |
+| license.js | 8 | ✅ |
+| bgm-engine.js | 4 | ✅ |
+| subtitle-engine.js | 5 | ✅ |
+| draft-export.js | 5 | ✅ |
+| auto-detect.js | 6 | ✅ |
+| translation.js | 7 | ✅ |
+| publish-engine.js | 3 | ✅ |
+| git-sync.js | 1 | ✅ |
+| video-composer.js | 2 | ✅ |
+| ai-engine.js | 1 | ✅ |
+| user-account.js | 6 | ✅ |
+| project-pack.js | 4 | ✅ |
 
-生成剧本时，AI 会自动参考记忆库中的角色，保持跨短剧一致性。
+## 🔧 核心架构
 
-### Git 远程备份
+### 零外部依赖
+所有 native 模块完全纯 JS 替代：
+- **SQLite** → `sql.js` (WebAssembly)
+- **FFmpeg** → `@ffmpeg/ffmpeg` (WebAssembly)
+- **数据库** → 同步 API，无 Python 依赖
 
-1. **设置** → **Git 远程备份**
-2. 在 GitHub/Gitee 创建空仓库
-3. 填入仓库地址（例如 `https://github.com/你的用户名/lobster-studio.git`）
-4. 点击 "绑定"
-5. 每次要备份时，填写提交说明 → 点击 "提交并推送"
+### 授权体系
+| 版本 | 特性 |
+|------|------|
+| 社区版 | 基础功能，场景数量限制 |
+| 专业版 | AI 剧本/图像/TTS，向量记忆 |
+| 永久版 | 全部功能，无限发布 |
 
-> 提示：首次推送需用 Token 认证。
-> 去 GitHub Settings → Developer settings → Personal access tokens → 创建 token
-> 然后运行：`git remote set-url origin https://TOKEN@github.com/用户名/仓库名.git`
+### 发布平台 (13个)
+- **国内**: 抖音 / 快手 / B站 / 视频号 / 小红书
+- **海外**: TikTok / YouTube / Instagram / KakaoTV / NaverTV / Facebook / X(Twitter)
+- **自适应**: 分辨率/时长/标签/风格自动适配
 
-### 授权管理
+### 翻译 (50种语言，15个区域)
+全球 / 中国 / 南亚 / 西班牙语 / 法语 / 中东 / 斯拉夫 / 罗曼 / 日耳曼 / 北欧 / 东亚 / 东南亚 / 西斯拉夫 / 芬兰-乌戈尔 / 巴尔干 / 非洲 / 中亚
 
-- **社区版**（免费）：基础功能，最多10个分镜、5个项目
-- **专业版**（¥199/年）：AI 生成、视频合成、多平台发布
-- **永久版**（¥599）：终身更新 + 优先支持
+## 📜 版本历史
 
-> 演示激活码：`LOBSTER-PRO-2026-DEMO`
+```
+23 commits (master)
+├─ 7f29aa0 Add: Responsive layout + mobile sidebar
+├─ a2e3162 Add: Theme switch + upgraded Dashboard + Pipeline fix
+├─ 1cd1d90 Add: Full-chain live test suite + E2E test guide
+├─ 09f3800 Fix: All 7 defects repaired, 64/64 tests passing
+├─ d55a2df Add: self-test suite v3 + knowledge base
+├─ b85f28e Phase 5 v9: Installer package + Mobile version
+├─ ... (17 more)
+└─ a5303ea Initial commit
+```
 
----
+## ⚠️ 已知限制
+- **GitHub推送**: 目标仓库 `hey2299/lobster-studio` 网络不可达
+- **FFmpeg WASM**: 30MB+，性能低于原生
+- **sql.js**: 同步API，大文档需分页
+- **Electron**: 需 display server（Windows桌面）
 
-## 常见问题
-
-**Q: 需要联网吗？**
-A: 所有 AI 功能需要联网（调用云端 API）。合成视频、角色记忆在本地完成。
-
-**Q: 可以商用吗？**
-A: 社区版可用于学习。商业用途请购买专业版。
-
-**Q: 生成的视频质量如何？**
-A: 画面质量取决于使用的 AI 图像模型（推荐 SiliconFlow FLUX.1）。
-视频输出 1920×1080，H.264 编码。
-
-**Q: 支持什么平台？**
-A: Windows/macOS（Electron 跨平台）。当前仅打包了 Windows 版。
+## 📝 许可
+MIT License — 免费使用，可商用
