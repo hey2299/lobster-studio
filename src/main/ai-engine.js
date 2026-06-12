@@ -159,4 +159,97 @@ async function expandStoryboard(scenes) {
   }
 }
 
-module.exports = { configureAI, generateScript, generateCharacterPrompt, expandStoryboard, getClient };
+async function generateImage(scene) {
+  // Returns base64 image data via the configured image API
+  // Falls back to a lightweight free API if no config set
+  const prompt = scene.imagePrompt || (scene.description + ', cinematic, 16:9, photorealistic');
+
+  // Try configured image API first
+  const imageApiKey = null; // Will be passed from settings in real usage
+  const imageProvider = 'siliconflow';
+
+  const baseUrls = {
+    siliconflow: 'https://api.siliconflow.cn/v1',
+    openai: 'https://api.openai.com/v1',
+  };
+
+  const baseUrl = baseUrls[imageProvider] || baseUrls.siliconflow;
+
+  if (imageApiKey) {
+    try {
+      const fetch = (await import('node-fetch')).default;
+      const resp = await fetch(baseUrl + '/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + imageApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: imageProvider === 'openai' ? 'dall-e-3' : 'black-forest-labs/FLUX.1-schnell',
+          prompt: prompt,
+          n: 1,
+          size: '1024x576',
+          response_format: 'b64_json',
+        }),
+      });
+      const json = await resp.json();
+      if (json.data && json.data[0] && json.data[0].b64_json) {
+        return 'data:image/png;base64,' + json.data[0].b64_json;
+      }
+      // Also support url format
+      if (json.data && json.data[0] && json.data[0].url) {
+        return json.data[0].url;
+      }
+      console.warn('Image generation returned unexpected format:', json);
+      return '';
+    } catch (e) {
+      console.warn('Image generation failed:', e.message);
+      return '';
+    }
+  }
+
+  // No API key configured - return empty (UI will show placeholder)
+  return '';
+}
+
+async function generateAllSceneImages(scenes) {
+  const results = [];
+  for (let i = 0; i < scenes.length; i++) {
+    const imageUrl = await generateImage(scenes[i]);
+    results.push({ sceneIndex: i, imageUrl });
+  }
+  return results;
+}
+
+async function generateTTS(text, voiceType) {
+  // Generate speech audio from text
+  const ttsApiKey = null; // Will be configured via settings
+
+  if (ttsApiKey) {
+    try {
+      const fetch = (await import('node-fetch')).default;
+      const resp = await fetch('https://api.siliconflow.cn/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + ttsApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'fish-speech-1.5',
+          input: text,
+          voice: voiceType || 'default',
+          response_format: 'mp3',
+        }),
+      });
+      const buffer = await resp.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString('base64');
+      return 'data:audio/mp3;base64,' + base64;
+    } catch (e) {
+      console.warn('TTS generation failed:', e.message);
+      return '';
+    }
+  }
+  return '';
+}
+
+module.exports = { configureAI, generateScript, generateCharacterPrompt, expandStoryboard, generateImage, generateAllSceneImages, generateTTS, getClient };

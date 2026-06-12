@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { initDatabase, getCharacters, saveCharacter, deleteCharacter,
   getProjects, saveProject, deleteProject, getSetting, setSetting } = require('./database');
-const { generateScript, generateCharacterPrompt, expandStoryboard, configureAI } = require('./ai-engine');
+const { generateScript, generateCharacterPrompt, expandStoryboard, configureAI, generateImage, generateAllSceneImages, generateTTS } = require('./ai-engine');
 
 let mainWindow;
 let dbInitialized = false;
@@ -113,6 +113,38 @@ function registerIpcHandlers() {
       mainWindow?.webContents.send('ai:progress', { step: 'storyboard', message: 'AI 正在生成分镜...' });
       const result = await expandStoryboard(scenes);
       return { success: true, data: result };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // Image generation (Phase 2)
+  ipcMain.handle('ai:generateImage', async (_, scene) => {
+    try {
+      mainWindow?.webContents.send('ai:progress', { step: 'image', message: 'AI 正在生成画面...' });
+      const imageUrl = await generateImage(scene);
+      return { success: true, data: { sceneIndex: scene.index, imageUrl } };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('ai:generateAllImages', async (_, scenes) => {
+    try {
+      mainWindow?.webContents.send('ai:progress', { step: 'image', message: 'AI 正在批量生成画面...' });
+      const results = await generateAllSceneImages(scenes);
+      return { success: true, data: results };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // TTS (Phase 2)
+  ipcMain.handle('ai:generateTTS', async (_, text, voiceType) => {
+    try {
+      mainWindow?.webContents.send('ai:progress', { step: 'tts', message: 'AI 正在生成配音...' });
+      const audioUrl = await generateTTS(text, voiceType);
+      return { success: true, data: { audioUrl } };
     } catch (e) {
       return { success: false, error: e.message };
     }

@@ -20,6 +20,9 @@ declare global {
       aiGenerateCharacterPrompt: (char: any) => Promise<{ success: boolean; data?: string; error?: string }>;
       aiExpandStoryboard: (scenes: any[]) => Promise<{ success: boolean; data?: any; error?: string }>;
       aiConfigure: (provider: string, apiKey: string, model: string) => Promise<boolean>;
+      aiGenerateImage: (scene: any) => Promise<{ success: boolean; data?: { sceneIndex: number; imageUrl: string }; error?: string }>;
+      aiGenerateAllImages: (scenes: any[]) => Promise<{ success: boolean; data?: { sceneIndex: number; imageUrl: string }[]; error?: string }>;
+      aiGenerateTTS: (text: string, voiceType: string) => Promise<{ success: boolean; data?: { audioUrl: string }; error?: string }>;
     };
   }
 }
@@ -42,6 +45,9 @@ export const ai = {
   generateCharacterPrompt: (char: any) => api?.aiGenerateCharacterPrompt(char) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
   expandStoryboard: (scenes: any[]) => api?.aiExpandStoryboard(scenes) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
   configure: (provider: string, apiKey: string, model: string) => api?.aiConfigure(provider, apiKey, model) ?? Promise.resolve(false),
+  generateImage: (scene: any) => api?.aiGenerateImage(scene) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
+  generateAllImages: (scenes: any[]) => api?.aiGenerateAllImages(scenes) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
+  generateTTS: (text: string, voiceType: string) => api?.aiGenerateTTS(text, voiceType) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
 };
 
 // Events from main process

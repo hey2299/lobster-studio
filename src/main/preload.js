@@ -24,6 +24,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   aiGenerateCharacterPrompt: (char) => ipcRenderer.invoke('ai:generateCharacterPrompt', char),
   aiExpandStoryboard: (scenes) => ipcRenderer.invoke('ai:expandStoryboard', scenes),
   aiConfigure: (provider, apiKey, model) => ipcRenderer.invoke('ai:configure', provider, apiKey, model),
+
+  // Image generation
+  aiGenerateImage: (scene) => ipcRenderer.invoke('ai:generateImage', scene),
+  aiGenerateAllImages: (scenes) => ipcRenderer.invoke('ai:generateAllImages', scenes),
+
+  // TTS
+  aiGenerateTTS: (text, voiceType) => ipcRenderer.invoke('ai:generateTTS', text, voiceType),
 });
 
 // Listen for main process events
