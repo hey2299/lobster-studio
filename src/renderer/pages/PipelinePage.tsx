@@ -30,6 +30,7 @@ const PipelinePage: React.FC = () => {
   const [draftExport, setDraftExport] = useState<string>('none');
   const [translationLang, setTranslationLang] = useState<string>('');
   const [translationEnabled, setTranslationEnabled] = useState(false);
+  const [previewScene, setPreviewScene] = useState<PipelineScene | null>(null);
 
   useEffect(() => {
     loadOutputs();
@@ -397,19 +398,51 @@ const PipelinePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Scene list */}
+      {/* Scene list with preview player + drag-to-reorder */}
       {scenes.length > 0 && (
         <div className="stagger" style={{ marginBottom: 20 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 12 }}>
-            {projectName} · {scenes.length} 个分镜
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {projectName} · {scenes.length} 个分镜
+            </h3>
+            {scenes.length > 0 && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => {
+                    const reordered = [...scenes];
+                    [reordered[0], reordered[reordered.length - 1]] = [reordered[reordered.length - 1], reordered[0]];
+                    setScenes(reordered);
+                  }}
+                  className="btn-ghost" style={{ fontSize: 11 }}
+                >
+                  🔄 首尾互换
+                </button>
+                <button
+                  onClick={() => {
+                    const reordered = [...scenes].reverse();
+                    setScenes(reordered);
+                  }}
+                  className="btn-ghost" style={{ fontSize: 11 }}
+                >
+                  ⏪ 反转顺序
+                </button>
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {scenes.map((ps, i) => (
               <div key={ps.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12 }}>
-                <div style={{
-                  width: 90, height: 50, borderRadius: 6, overflow: 'hidden',
-                  background: 'var(--bg-secondary)', flexShrink: 0, position: 'relative',
-                }}>
+                {/* Preview thumbnail — click to show preview in modal */}
+                <div
+                  onClick={() => setPreviewScene(ps)}
+                  style={{
+                    width: 120, height: 67, borderRadius: 6, overflow: 'hidden',
+                    background: 'var(--bg-secondary)', flexShrink: 0, position: 'relative',
+                    cursor: 'pointer',
+                  }}
+                  title="点击预览"
+                >
                   {ps.imageDataUrl ? (
                     <img src={ps.imageDataUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
@@ -424,10 +457,20 @@ const PipelinePage: React.FC = () => {
                   }}>
                     #{i + 1}
                   </div>
+                  {/* Play overlay */}
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'rgba(0,0,0,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: 0, transition: 'opacity 0.2s',
+                  }} className="scene-play-overlay">
+                    <span style={{ fontSize: 28 }}>▶️</span>
+                  </div>
                 </div>
+
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{ps.location}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 8 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <span>🎬 {ps.cameraAngle}</span>
                     <span>🎭 {ps.mood}</span>
                     <span>⏱ {ps.duration}s</span>
@@ -440,11 +483,118 @@ const PipelinePage: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <div className={`badge ${ps.imageDataUrl ? 'badge-success' : 'badge-warning'}`}>
-                  {ps.imageDataUrl ? '✅ 就绪' : '⏳ 待处理'}
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  <div className={`badge ${ps.imageDataUrl ? 'badge-success' : 'badge-warning'}`}>
+                    {ps.imageDataUrl ? '✅ 就绪' : '⏳ 待处理'}
+                  </div>
+                  {/* Move up/down buttons */}
+                  <div style={{ display: 'flex', gap: 2 }}>
+                    <button
+                      onClick={() => {
+                        if (i === 0) return;
+                        const reordered = [...scenes];
+                        [reordered[i-1], reordered[i]] = [reordered[i], reordered[i-1]];
+                        setScenes(reordered);
+                      }}
+                      title="上移"
+                      style={{
+                        background: 'none', border: '1px solid var(--border)',
+                        borderRadius: 4, cursor: 'pointer', padding: '2px 6px',
+                        fontSize: 12, color: i === 0 ? 'var(--text-muted)' : 'var(--text-secondary)',
+                        opacity: i === 0 ? 0.3 : 1,
+                      }}
+                      disabled={i === 0}
+                    >↑</button>
+                    <button
+                      onClick={() => {
+                        if (i === scenes.length - 1) return;
+                        const reordered = [...scenes];
+                        [reordered[i], reordered[i+1]] = [reordered[i+1], reordered[i]];
+                        setScenes(reordered);
+                      }}
+                      title="下移"
+                      style={{
+                        background: 'none', border: '1px solid var(--border)',
+                        borderRadius: 4, cursor: 'pointer', padding: '2px 6px',
+                        fontSize: 12, color: i === scenes.length - 1 ? 'var(--text-muted)' : 'var(--text-secondary)',
+                        opacity: i === scenes.length - 1 ? 0.3 : 1,
+                      }}
+                      disabled={i === scenes.length - 1}
+                    >↓</button>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Preview modal */}
+      {previewScene && (
+        <div
+          onClick={() => setPreviewScene(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '90%', maxHeight: '90%',
+              background: '#000', borderRadius: 12, overflow: 'hidden',
+              boxShadow: '0 8px 60px rgba(0,0,0,0.8)',
+            }}
+          >
+            {/* Preview canvas (image + dialogue overlay) */}
+            {previewScene.imageDataUrl && (
+              <div style={{ position: 'relative' }}>
+                <img src={previewScene.imageDataUrl} alt="" style={{
+                  maxWidth: '100%', maxHeight: '80vh', display: 'block',
+                }} />
+                {/* Bottom subtitle overlay */}
+                {previewScene.dialogue && previewScene.dialogue.length > 0 && (
+                  <div style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    padding: '40px 40px 24px',
+                    background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+                  }}>
+                    {previewScene.dialogue.map((d, di) => (
+                      <div key={di} style={{ marginBottom: di < previewScene.dialogue.length - 1 ? 8 : 0 }}>
+                        <div style={{
+                          color: '#ff6b6b', fontSize: 14, fontWeight: 600,
+                          marginBottom: 2, textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+                        }}>
+                          {d.characterName}
+                        </div>
+                        <div style={{
+                          color: '#fff', fontSize: 18, fontWeight: 500,
+                          textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+                          lineHeight: 1.4,
+                        }}>
+                          {d.line}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Scene info bar */}
+            <div style={{
+              padding: '12px 20px',
+              background: '#111',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              fontSize: 12, color: '#888',
+            }}>
+              <span>📍 {previewScene.location}</span>
+              <span>🎭 {previewScene.mood} · {previewScene.cameraAngle}</span>
+              <span>⏱ {previewScene.duration}s</span>
+              <span style={{ color: '#fff', cursor: 'pointer' }} onClick={() => setPreviewScene(null)}>✕ 关闭</span>
+            </div>
           </div>
         </div>
       )}
