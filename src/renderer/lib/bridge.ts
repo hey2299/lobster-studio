@@ -20,6 +20,11 @@ declare global {
       aiGenerateCharacterPrompt: (char: any) => Promise<{ success: boolean; data?: string; error?: string }>;
       aiExpandStoryboard: (scenes: any[]) => Promise<{ success: boolean; data?: any; error?: string }>;
       aiConfigure: (provider: string, apiKey: string, model: string) => Promise<boolean>;
+      memoryStore: (char: any) => Promise<boolean>;
+      memorySearch: (query: any, threshold?: number) => Promise<any[]>;
+      memoryFindByName: (name: string) => Promise<any>;
+      memoryAddAlias: (id: string, alias: string, script?: string) => Promise<boolean>;
+      memoryGetStats: () => Promise<{ characters: number; aliases: number }>;
       aiGenerateImage: (scene: any) => Promise<{ success: boolean; data?: { sceneIndex: number; imageUrl: string }; error?: string }>;
       aiGenerateAllImages: (scenes: any[]) => Promise<{ success: boolean; data?: { sceneIndex: number; imageUrl: string }[]; error?: string }>;
       aiGenerateTTS: (text: string, voiceType: string) => Promise<{ success: boolean; data?: { audioUrl: string }; error?: string }>;
@@ -38,6 +43,14 @@ export const db = {
   deleteProject: (id: string) => api?.dbDeleteProject(id) ?? Promise.resolve(),
   getSetting: (key: string) => api?.dbGetSetting(key) ?? Promise.resolve(null),
   setSetting: (key: string, value: string) => api?.dbSetSetting(key, value) ?? Promise.resolve(),
+};
+
+export const memory = {
+  store: (char: any) => api?.memoryStore(char) ?? Promise.resolve(false),
+  search: (query: any, threshold = 0.4) => api?.memorySearch(query, threshold) ?? Promise.resolve([]),
+  findByName: (name: string) => api?.memoryFindByName(name) ?? Promise.resolve(null),
+  addAlias: (id: string, alias: string, script?: string) => api?.memoryAddAlias(id, alias, script) ?? Promise.resolve(false),
+  getStats: () => api?.memoryGetStats() ?? Promise.resolve({ characters: 0, aliases: 0 }),
 };
 
 export const ai = {

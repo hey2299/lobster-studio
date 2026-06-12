@@ -3,6 +3,7 @@ const path = require('path');
 const { initDatabase, getCharacters, saveCharacter, deleteCharacter,
   getProjects, saveProject, deleteProject, getSetting, setSetting } = require('./database');
 const { generateScript, generateCharacterPrompt, expandStoryboard, configureAI, generateImage, generateAllSceneImages, generateTTS } = require('./ai-engine');
+const memory = require('./vector-memory');
 
 let mainWindow;
 let dbInitialized = false;
@@ -32,14 +33,22 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Initialize database
   try {
-    const dbPath = initDatabase();
-    console.log('Database initialized at:', dbPath);
+    await initDatabase();
+    console.log('Database initialized');
     dbInitialized = true;
   } catch (e) {
     console.error('Database init failed:', e.message);
+  }
+
+  // Init memory engine
+  try {
+    await memory.initMemoryDB();
+    console.log('Memory engine initialized');
+  } catch (e) {
+    console.error('Memory init failed:', e.message);
   }
 
   // Register all IPC handlers
@@ -137,6 +146,29 @@ function registerIpcHandlers() {
     } catch (e) {
       return { success: false, error: e.message };
     }
+  });
+
+  // Vector Memory (Phase 2)
+  ipcMain.handle('memory:store', (_, char) => {
+    memory.storeCharacterMemory(char);
+    return true;
+  });
+
+  ipcMain.handle('memory:search', (_, query, threshold) => {
+    return memory.searchSimilarCharacters(query, threshold);
+  });
+
+  ipcMain.handle('memory:findByName', (_, name) => {
+    return memory.findCharacterByName(name);
+  });
+
+  ipcMain.handle('memory:addAlias', (_, id, alias, script) => {
+    memory.addAlias(id, alias, script);
+    return true;
+  });
+
+  ipcMain.handle('memory:getStats', () => {
+    return memory.getMemoryStats();
   });
 
   // TTS (Phase 2)

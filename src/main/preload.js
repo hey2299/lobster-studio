@@ -25,6 +25,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   aiExpandStoryboard: (scenes) => ipcRenderer.invoke('ai:expandStoryboard', scenes),
   aiConfigure: (provider, apiKey, model) => ipcRenderer.invoke('ai:configure', provider, apiKey, model),
 
+  // Vector Memory
+  memoryStore: (char) => ipcRenderer.invoke('memory:store', char),
+  memorySearch: (query, threshold) => ipcRenderer.invoke('memory:search', query, threshold),
+  memoryFindByName: (name) => ipcRenderer.invoke('memory:findByName', name),
+  memoryAddAlias: (id, alias, script) => ipcRenderer.invoke('memory:addAlias', id, alias, script),
+  memoryGetStats: () => ipcRenderer.invoke('memory:getStats'),
+
   // Image generation
   aiGenerateImage: (scene) => ipcRenderer.invoke('ai:generateImage', scene),
   aiGenerateAllImages: (scenes) => ipcRenderer.invoke('ai:generateAllImages', scenes),
