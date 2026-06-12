@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import DashboardPage from './pages/DashboardPage';
@@ -18,6 +18,7 @@ const App: React.FC = () => {
   const [initialized, setInitialized] = useState(false);
   const [stats, setStats] = useState({ projects: 0, characters: 0 });
   const [theme, setTheme] = useState<string>('dark');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Load saved theme
   useEffect(() => {
@@ -32,6 +33,11 @@ const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('lobster-theme', next);
   };
+
+  const handleNavigate = useCallback((page: PageKey) => {
+    setActivePage(page);
+    setSidebarOpen(false); // auto-close on mobile
+  }, []);
 
   useEffect(() => {
     // Load saved data on startup
@@ -53,7 +59,7 @@ const App: React.FC = () => {
 
   const renderPage = () => {
     switch (activePage) {
-      case 'dashboard': return <DashboardPage onNavigate={setActivePage} stats={stats} />;
+      case 'dashboard': return <DashboardPage onNavigate={handleNavigate} stats={stats} />;
       case 'script': return <ScriptFactoryPage />;
       case 'characters': return <CharacterWorkshopPage />;
       case 'storyboard': return <StoryboardPage />;
@@ -61,13 +67,21 @@ const App: React.FC = () => {
       case 'pipeline': return <PipelinePage />;
       case 'publish': return <PublishPage />;
       case 'settings': return <SettingsPage />;
-      default: return <DashboardPage onNavigate={setActivePage} stats={stats} />;
+      default: return <DashboardPage onNavigate={handleNavigate} stats={stats} />;
     }
   };
 
   return (
     <div style={{ display: 'flex', height: '100vh', flexDirection: 'column' }}>
+      {/* Titlebar */}
       <div className="titlebar">
+        <button
+          className="sidebar-toggle-btn"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          title={sidebarOpen ? '关闭菜单' : '打开菜单'}
+        >
+          {sidebarOpen ? '✕' : '☰'}
+        </button>
         <span className="titlebar-title">🦞 龙虾短剧工坊 {initialized ? '' : '— 启动中...'}</span>
         <div style={{ flex: 1 }} />
         <button
@@ -83,8 +97,21 @@ const App: React.FC = () => {
           {theme === 'dark' ? '☀️' : '🌙'}
         </button>
       </div>
+
+      {/* Mobile overlay when sidebar is open */}
+      {sidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <Sidebar activePage={activePage} onNavigate={setActivePage} />
+        <Sidebar
+          activePage={activePage}
+          onNavigate={handleNavigate}
+          isOpen={sidebarOpen}
+        />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <TopBar activePage={activePage} />
           <main style={{ flex: 1, overflow: 'auto', padding: '24px' }}>

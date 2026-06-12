@@ -4,6 +4,7 @@ import { PageKey } from '../App';
 interface SidebarProps {
   activePage: PageKey;
   onNavigate: (page: PageKey) => void;
+  isOpen: boolean;
 }
 
 type NavItem = {
@@ -31,76 +32,46 @@ const groupLabels: Record<string, string> = {
   system: '系统',
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, isOpen }) => {
   let lastGroup = '';
 
   return (
-    <nav style={{
-      width: 200,
-      background: 'var(--bg-secondary)',
-      borderRight: '1px solid var(--border)',
-      display: 'flex',
-      flexDirection: 'column',
-      flexShrink: 0,
-    }}>
-      <div style={{ flex: 1, overflow: 'auto', padding: '12px 0' }}>
-        {navItems.map((item) => {
-          const showGroup = item.group !== lastGroup;
-          lastGroup = item.group;
-          const isActive = activePage === item.key;
-          return (
-            <React.Fragment key={item.key}>
-              {showGroup && item.group && (
-                <div style={{
-                  padding: '16px 16px 6px',
-                  fontSize: 11,
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: 1,
-                  fontWeight: 600,
-                }}>
-                  {groupLabels[item.group]}
-                </div>
-              )}
-              <button
-                onClick={() => onNavigate(item.key)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  width: '100%',
-                  padding: '10px 16px',
-                  border: 'none',
-                  background: isActive ? 'var(--bg-tertiary)' : 'transparent',
-                  color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  fontWeight: isActive ? 600 : 400,
-                  borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-              >
-                <span style={{ fontSize: 16 }}>{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            </React.Fragment>
-          );
-        })}
-      </div>
-
-      {/* Bottom branding */}
-      <div style={{
-        padding: '12px 16px',
-        borderTop: '1px solid var(--border)',
-        fontSize: 11,
-        color: 'var(--text-muted)',
-        textAlign: 'center',
+    <div className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
+      <nav style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
       }}>
-        v1.0.0-alpha
-      </div>
-    </nav>
+        <div style={{ flex: 1, overflow: 'auto', padding: '12px 0' }}>
+          {navItems.map((item) => {
+            const showGroup = item.group !== lastGroup;
+            lastGroup = item.group;
+            const isActive = activePage === item.key;
+            return (
+              <React.Fragment key={item.key}>
+                {showGroup && item.group && (
+                  <div className="sidebar-group-label">
+                    {groupLabels[item.group]}
+                  </div>
+                )}
+                <button
+                  onClick={() => onNavigate(item.key)}
+                  className={`sidebar-item ${isActive ? 'sidebar-item-active' : ''}`}
+                >
+                  <span className="sidebar-item-icon">{item.icon}</span>
+                  <span className="sidebar-item-label">{item.label}</span>
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </div>
+
+        {/* Bottom branding */}
+        <div className="sidebar-branding">
+          v1.0.0-alpha
+        </div>
+      </nav>
+    </div>
   );
 };
 
