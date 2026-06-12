@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ai, db, autodetect } from '../lib/bridge';
+import { ai, db, autodetect, translate } from '../lib/bridge';
 
 interface Platform {
   id: string;
@@ -39,6 +39,9 @@ const PublishPage: React.FC = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const [detectMode, setDetectMode] = useState<'domestic' | 'overseas'>('domestic');
+  const [translateEnabled, setTranslateEnabled] = useState(false);
+  const [publishLang, setPublishLang] = useState<string>('en');
+  const [publishBilingual, setPublishBilingual] = useState(true);
   const [metadata, setMetadata] = useState({
     title: '',
     description: '',
@@ -59,6 +62,14 @@ const PublishPage: React.FC = () => {
     setPlatforms(p);
     setOutputs(o);
     setHistory(h);
+
+    // Load translation settings
+    const savedLang = await db.getSetting('translationTargetLang');
+    const savedAuto = await db.getSetting('translationAuto');
+    if (savedLang && savedLang !== 'zh') {
+      setPublishLang(savedLang);
+      setTranslateEnabled(savedAuto !== 'false');
+    }
 
     runAutoAnalysis();
   };
@@ -380,6 +391,40 @@ const PublishPage: React.FC = () => {
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
             选择要发布的平台。需要先在平台开发者后台获取 API Token。
           </p>
+
+          {/* Translation toggle */}
+          <div style={{
+            display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center',
+            padding: '8px 12px', marginBottom: 12,
+            background: 'var(--bg-secondary)', borderRadius: 8,
+          }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+              <input type="checkbox" checked={translateEnabled} onChange={e => setTranslateEnabled(e.target.checked)}
+                style={{ accentColor: 'var(--accent)' }} />
+              🌐 翻译为
+            </label>
+            <select value={publishLang} onChange={e => setPublishLang(e.target.value)}
+              style={{ fontSize: 12, padding: '4px 8px', borderRadius: 4 }}>
+              <option value="en">🇬🇧 English</option>
+              <option value="ja">🇯🇵 日本語</option>
+              <option value="ko">🇰🇷 한국어</option>
+              <option value="es">🇪🇸 Español</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="pt">🇵🇹 Português</option>
+              <option value="vi">🇻🇳 Tiếng Việt</option>
+              <option value="th">🇹🇭 ไทย</option>
+              <option value="id">🇮🇩 Bahasa</option>
+              <option value="ms">🇲🇾 Melayu</option>
+              <option value="ar">🇸🇦 العربية</option>
+              <option value="ru">🇷🇺 Русский</option>
+              <option value="de">🇩🇪 Deutsch</option>
+            </select>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <input type="checkbox" checked={publishBilingual} onChange={e => setPublishBilingual(e.target.checked)}
+                style={{ accentColor: 'var(--accent)', width: 14, height: 14 }} />
+              双语
+            </label>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {platforms.map((p) => (

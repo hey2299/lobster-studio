@@ -422,6 +422,10 @@ function registerIpcHandlers() {
   ipcMain.handle('translation:stats', async () => {
     return transEngine.getStats();
   });
+
+  ipcMain.handle('translation:regionGroup', async () => {
+    return transEngine.groupByRegion();
+  });
 }
 
 app.on('window-all-closed', () => {

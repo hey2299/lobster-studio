@@ -72,6 +72,7 @@ declare global {
       translateBilingualASS: (zh: any[], t: any[], lang: string) => Promise<{ success: boolean; data?: string; error?: string }>;
       translateGenerateSRT: (subs: any[]) => Promise<string>;
       translateStats: () => Promise<any>;
+      translateRegionGroup: () => Promise<any>;
     };
   }
 }
@@ -130,6 +131,7 @@ export const translate = {
   bilingualASS: (zh: any[], t: any[], lang: string) => api?.translateBilingualASS(zh, t, lang) ?? Promise.resolve({ success: false }),
   generateSRT: (subs: any[]) => api?.translateGenerateSRT(subs) ?? Promise.resolve(''),
   stats: () => api?.translateStats() ?? Promise.resolve({}),
+  regionGroup: () => api?.translateRegionGroup() ?? Promise.resolve({}),
 };
 
 export const draft = {

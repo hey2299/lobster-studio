@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, ai } from '../lib/bridge';
+import { db, ai, translate, autodetect } from '../lib/bridge';
 
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState({
@@ -172,6 +172,9 @@ const SettingsPage: React.FC = () => {
       {/* 授权管理 */}
       <LicenseSection />
 
+      {/* 多语言翻译设置 */}
+      <TranslationSection />
+
       {/* Git 远程备份 */}
       <RepoManagerSection />
 
@@ -293,6 +296,141 @@ const LicenseSection: React.FC = () => {
     </div>
   );
 }
+
+// Translation language settings
+const TranslationSection: React.FC = () => {
+  const [regions, setRegions] = useState<Record<string, any>>({});
+  const [selectedRegion, setSelectedRegion] = useState<string>('');
+  const [targetLang, setTargetLang] = useState<string>('');
+  const [bilingual, setBilingual] = useState(true);
+  const [autoTranslate, setAutoTranslate] = useState(true);
+  const [saved, setSaved] = useState('');
+
+  useEffect(() => {
+    async function init() {
+      const groups = await translate.regionGroup();
+      setRegions(groups);
+
+      // Load saved preferences
+      const savedLang = await db.getSetting('translationTargetLang');
+      const savedRegion = await db.getSetting('translationTargetRegion');
+      const savedBilingual = await db.getSetting('translationBilingual');
+      const savedAuto = await db.getSetting('translationAuto');
+
+      if (savedLang) setTargetLang(savedLang);
+      if (savedRegion) { setSelectedRegion(savedRegion); }
+      else if (Object.keys(groups).length > 0) setSelectedRegion(Object.keys(groups)[0]);
+      if (savedBilingual === 'false') setBilingual(false);
+      if (savedAuto === 'false') setAutoTranslate(false);
+    }
+    init();
+  }, []);
+
+  const handleSave = async () => {
+    await db.setSetting('translationTargetLang', targetLang);
+    await db.setSetting('translationTargetRegion', selectedRegion);
+    await db.setSetting('translationBilingual', bilingual ? 'true' : 'false');
+    await db.setSetting('translationAuto', autoTranslate ? 'true' : 'false');
+    setSaved('✅ 翻译设置已保存');
+    setTimeout(() => setSaved(''), 2500);
+  };
+
+  const currentLang = regions[selectedRegion]?.languages || [];
+  const selectedLangInfo = currentLang.find((l: any) => l.code === targetLang);
+
+  return (
+    <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 16 }}>
+      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>🌐 多语言翻译设置</h3>
+      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+        设置默认翻译语言，用于海外平台发布
+        {targetLang && selectedLangInfo && (
+          <span style={{ marginLeft: 8, color: 'var(--accent)' }}>
+            当前: {selectedLangInfo.flag} {selectedLangInfo.nativeName}
+          </span>
+        )}
+      </p>
+
+      {/* Region selector */}
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>选择区域</label>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {Object.entries(regions).map(([key, region]: [string, any]) => (
+            <button key={key} onClick={() => { setSelectedRegion(key); setTargetLang(''); }}
+              style={{
+                padding: '6px 12px', borderRadius: 6,
+                border: `1px solid ${selectedRegion === key ? 'var(--accent)' : 'var(--border)'}`,
+                background: selectedRegion === key ? 'var(--accent)' : 'var(--bg-secondary)',
+                color: selectedRegion === key ? '#fff' : 'var(--text-primary)',
+                cursor: 'pointer', fontSize: 12,
+              }}>
+              {region.name} ({region.languages?.length || 0})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Language grid */}
+      {currentLang.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>选择目标语言</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 4 }}>
+            {currentLang.map((lang: any) => (
+              <button key={lang.code} onClick={() => setTargetLang(lang.code)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6,
+                  border: `1px solid ${targetLang === lang.code ? 'var(--accent)' : 'var(--border)'}`,
+                  background: targetLang === lang.code ? 'var(--accent)22' : 'var(--bg-secondary)',
+                  color: 'var(--text-primary)', cursor: 'pointer', fontSize: 12, textAlign: 'left',
+                }}>
+                <span style={{ fontSize: 16 }}>{lang.flag}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: targetLang === lang.code ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {lang.nativeName}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                    {lang.name} {lang.direction === 'rtl' ? '🔁' : ''}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Settings toggles */}
+      <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+          <input type="checkbox" checked={bilingual} onChange={e => setBilingual(e.target.checked)}
+            style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+          双语字幕（原文 + 翻译并列显示）
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
+          <input type="checkbox" checked={autoTranslate} onChange={e => setAutoTranslate(e.target.checked)}
+            style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+          自动翻译（发布时自动翻译为选中语言）
+        </label>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <button onClick={handleSave}
+          style={{
+            padding: '10px 24px', borderRadius: 8, border: 'none',
+            background: 'var(--accent)', color: '#fff', fontWeight: 600,
+            cursor: 'pointer', fontSize: 14, flex: 1,
+          }}>
+          💾 保存翻译设置
+        </button>
+        {saved && <span style={{ fontSize: 13, color: '#10b981' }}>{saved}</span>}
+      </div>
+
+      {/* Stats */}
+      <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 6, background: 'var(--bg-secondary)', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+        支持 50 种语言 · 4 种 RTL方向（阿拉伯语/乌尔都语/希伯来语/波斯语）· SRT/ASS双语字幕格式
+        · 自动适配海外平台语言要求
+      </div>
+    </div>
+  );
+};
 
 // Separate component for Git backup
 const RepoManagerSection: React.FC = () => {

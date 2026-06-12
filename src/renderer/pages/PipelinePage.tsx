@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ai, bgm, subtitle, draft, onAIProgress } from '../lib/bridge';
+import { ai, db, bgm, subtitle, draft, translate, onAIProgress } from '../lib/bridge';
 
 interface PipelineScene {
   id: string;
@@ -28,9 +28,12 @@ const PipelinePage: React.FC = () => {
   const [bgmEnabled, setBgmEnabled] = useState(true);
   const [subtitleFormat, setSubtitleFormat] = useState<string>('srt');
   const [draftExport, setDraftExport] = useState<string>('none');
+  const [translationLang, setTranslationLang] = useState<string>('');
+  const [translationEnabled, setTranslationEnabled] = useState(false);
 
   useEffect(() => {
     loadOutputs();
+    loadTranslationSettings();
     return onAIProgress((data: any) => {
       setProgressMsg(data.message);
       if (data.done && data.step === 'video') {
@@ -57,6 +60,15 @@ const PipelinePage: React.FC = () => {
     setProjectName('霸道总裁的契约新娘（演示）');
     setProgressMsg('✅ 加载了 4 个分镜演示数据');
     setTimeout(() => setProgressMsg(''), 3000);
+  };
+
+  const loadTranslationSettings = async () => {
+    const lang = await db.getSetting('translationTargetLang');
+    const auto = await db.getSetting('translationAuto');
+    if (lang && lang !== 'zh') {
+      setTranslationLang(lang);
+      setTranslationEnabled(auto !== 'false');
+    }
   };
 
   const createPlaceholderImage = (color: string, text: string, mood: string) => {
@@ -100,24 +112,46 @@ const PipelinePage: React.FC = () => {
         }
       }
 
-      // Step 2: Generate SRT subtitles
+      // Step 2: Translation (if enabled)
+      let translatedScenes = validScenes;
+      if (translationEnabled && translationLang) {
+        setProgress(35);
+        setProgressMsg(`🌐 AI 正在翻译为 ${translationLang}...`);
+        const transResult = await translate.script(validScenes, translationLang);
+        if (transResult.success && transResult.data) {
+          translatedScenes = transResult.data;
+          setProgressMsg(`✅ 已翻译为 ${translationLang}`);
+        } else {
+          setProgressMsg('⚠️ 翻译失败，使用中文版');
+        }
+      }
+
+      // Step 3: Generate subtitles (with translation if applied)
       setProgress(40);
       setProgressMsg('📝 正在生成字幕...');
       let subtitleContent = '';
       if (subtitleFormat === 'srt') {
-        subtitleContent = await subtitle.generateSRT(validScenes);
+        subtitleContent = await subtitle.generateSRT(translatedScenes);
       } else if (subtitleFormat === 'ass') {
-        subtitleContent = await subtitle.generateASS(validScenes);
+        subtitleContent = await subtitle.generateASS(translatedScenes);
       }
       setProgressMsg('✅ 字幕生成完成');
+
+      // For composing, use translated scenes
+      const composeScenes = translatedScenes;
 
       // Step 3: Compose video
       setStep('composing');
       setProgress(60);
       setProgressMsg('⚡ 正在合成视频 (1920×1080, H.264)...');
 
+      // Step 4: Compose video
+      setStep('composing');
+      setProgress(60);
+      setProgressMsg('⚡ 正在合成视频 (1920×1080, H.264)...');
+
       const composeResult = await ai.composeVideo({
-        scenes: validScenes.map(s => ({
+        scenes: composeScenes.map(s => ({
           imageDataUrl: s.imageDataUrl,
           audioDataUrl: s.audioDataUrl || '',
           duration: s.duration || 4,
@@ -279,6 +313,37 @@ const PipelinePage: React.FC = () => {
             <div className="progress-bar-fill" style={{ width: progress + '%' }} />
           </div>
         )}
+
+        {/* Translation toggle */}
+        <div style={{
+          display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center',
+          padding: '8px 0',
+        }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+            <input type="checkbox" checked={translationEnabled} onChange={e => setTranslationEnabled(e.target.checked)}
+              style={{ accentColor: 'var(--accent)' }} />
+            🌐 翻译字幕
+          </label>
+          {translationEnabled && (
+            <select value={translationLang} onChange={e => setTranslationLang(e.target.value)}
+              style={{ fontSize: 12, padding: '4px 8px', borderRadius: 4 }}>
+              <option value="en">🇬🇧 English</option>
+              <option value="ja">🇯🇵 日本語</option>
+              <option value="ko">🇰🇷 한국어</option>
+              <option value="es">🇪🇸 Español</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="pt">🇵🇹 Português</option>
+              <option value="vi">🇻🇳 Tiếng Việt</option>
+              <option value="th">🇹🇭 ไทย</option>
+              <option value="id">🇮🇩 Bahasa</option>
+              <option value="hi">🇮🇳 हिन्दी</option>
+              <option value="ms">🇲🇾 Melayu</option>
+              <option value="ar">🇸🇦 العربية (RTL)</option>
+              <option value="ru">🇷🇺 Русский</option>
+              <option value="de">🇩🇪 Deutsch</option>
+            </select>
+          )}
+        </div>
 
         {/* Options row */}
         <div style={{

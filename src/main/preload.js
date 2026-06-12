@@ -94,6 +94,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   translateBilingualASS: (zh, t, lang) => ipcRenderer.invoke('translation:generateBilingualASS', zh, t, lang),
   translateGenerateSRT: (subs) => ipcRenderer.invoke('translation:generateSRT', subs),
   translateStats: () => ipcRenderer.invoke('translation:stats'),
+  translateRegionGroup: () => ipcRenderer.invoke('translation:regionGroup'),
 });
 
 // Listen for main process events
