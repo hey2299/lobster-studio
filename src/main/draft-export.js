@@ -17,7 +17,12 @@ function exportCapCutDraft(project, scenes, options = {}) {
     fps = 24,
     width = 1920,
     height = 1080,
+    translationLang = '',
+    translatedScenes = null,
+    bilingual = true,
   } = options;
+  // If translationLang is set and translatedScenes provided, add bilingual subtitles
+  const hasTranslation = !!(translationLang && translatedScenes);
   
   const draftDir = path.join(outputDir, sanitizeFilename(projectName));
   const materialsDir = path.join(draftDir, 'materials');
@@ -108,7 +113,7 @@ function exportCapCutDraft(project, scenes, options = {}) {
       });
     }
     
-    // Subtitle segments
+    // Subtitle segments (with bilingual translation support)
     if (scene.dialogue && scene.dialogue.length > 0) {
       const perLineDuration = sceneDuration / scene.dialogue.length;
       
@@ -118,19 +123,33 @@ function exportCapCutDraft(project, scenes, options = {}) {
         const subEnd = subStart + perLineDuration;
         const subId = `SUB_${i + 1}_${j + 1}`;
         
+        // Build content: original + translated if bilingual mode
+        const originalText = line.characterName ? `${line.characterName}: ${line.line}` : line.line;
+        let translatedText = '';
+        if (hasTranslation && translatedScenes[i] && translatedScenes[i].dialogue) {
+          const tLine = translatedScenes[i].dialogue[j];
+          if (tLine) {
+            translatedText = tLine.characterName ? `${tLine.characterName}: ${tLine.line}` : (tLine.translatedText || tLine.line || '');
+          }
+        }
+        
+        const content = (hasTranslation && bilingual && translatedText)
+          ? `${originalText}\n${translatedText}`
+          : originalText;
+        
         subtitleTracks.push({
           id: subId,
           type: 'subtitle',
           start_time: subStart,
           end_time: subEnd,
-          content: line.characterName ? `${line.characterName}：${line.line}` : line.line,
+          content,
           style: {
             font_size: 36,
             font_color: '#FFFFFF',
             outline_color: '#000000',
             outline_width: 2,
             alignment: 'bottom_center',
-            font_family: 'Microsoft YaHei',
+            font_family: hasTranslation && translationLang !== 'zh' ? 'Segoe UI' : 'Microsoft YaHei',
             bold: false,
           },
         });
@@ -222,7 +241,11 @@ function exportFCPXML(project, scenes, options = {}) {
     fps = 24,
     width = 1920,
     height = 1080,
+    translationLang = '',
+    translatedScenes = null,
+    bilingual = true,
   } = options;
+  const hasTranslation = !!(translationLang && translatedScenes);
   
   // FCPXML 1.9 format (works in Premiere Pro 2023+)
   let totalDuration = 0;

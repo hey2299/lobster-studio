@@ -2,157 +2,83 @@ import React, { useState, useEffect } from 'react';
 import { db, ai, translate, autodetect } from '../lib/bridge';
 
 const SettingsPage: React.FC = () => {
-  const [settings, setSettings] = useState({
+  const [saved, setSaved] = useState(false);
+  const [testResult, setTestResult] = useState('');
+  const [settings, setSettings] = useState<any>({
     llmProvider: 'deepseek',
     llmApiKey: '',
     llmModel: 'deepseek-chat',
-    imageProvider: 'openai',
-    imageApiKey: '',
-    imageModel: 'dall-e-3',
-    ttsProvider: 'openai',
-    ttsApiKey: '',
   });
-  const [saved, setSaved] = useState(false);
-  const [testResult, setTestResult] = useState('');
 
   useEffect(() => {
-    loadSettings();
+    db.getSetting('llmProvider').then(v => v && setSettings(s => ({...s, llmProvider: v})));
+    db.getSetting('llmApiKey').then(v => v && setSettings(s => ({...s, llmApiKey: v})));
+    db.getSetting('llmModel').then(v => v && setSettings(s => ({...s, llmModel: v})));
   }, []);
 
-  const loadSettings = async () => {
-    const llmApiKey = await db.getSetting('llmApiKey');
-    const imageApiKey = await db.getSetting('imageApiKey');
-    const ttsApiKey = await db.getSetting('ttsApiKey');
-    const llmProvider = await db.getSetting('llmProvider');
-    const llmModel = await db.getSetting('llmModel');
-    setSettings({
-      llmProvider: llmProvider || 'deepseek',
-      llmApiKey: llmApiKey || '',
-      llmModel: llmModel || 'deepseek-chat',
-      imageProvider: 'openai',
-      imageApiKey: imageApiKey || '',
-      imageModel: 'dall-e-3',
-      ttsProvider: 'openai',
-      ttsApiKey: ttsApiKey || '',
-    });
-  };
+  const providers = [
+    { value: 'deepseek', label: '🧠 DeepSeek', desc: '国内可用，性价比高' },
+    { value: 'openai', label: '🌐 OpenAI', desc: 'GPT-4，需海外网络' },
+    { value: 'siliconflow', label: '🔮 硅基流动', desc: 'SiliconFlow，免费额度' },
+    { value: 'glm', label: '💠 GLM', desc: '智谱AI，国产大模型' },
+  ];
 
   const saveSettings = async () => {
-    await db.setSetting('llmApiKey', settings.llmApiKey);
-    await db.setSetting('imageApiKey', settings.imageApiKey);
-    await db.setSetting('ttsApiKey', settings.ttsApiKey);
-    await db.setSetting('llmProvider', settings.llmProvider);
-    await db.setSetting('llmModel', settings.llmModel);
-    await ai.configure(settings.llmProvider, settings.llmApiKey, settings.llmModel);
+    await Promise.all([
+      db.setSetting('llmProvider', settings.llmProvider),
+      db.setSetting('llmApiKey', settings.llmApiKey),
+      db.setSetting('llmModel', settings.llmModel),
+    ]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
   const testConnection = async () => {
-    setTestResult('⏳ 测试连接中...');
+    setTestResult('⏳ 测试中...');
     try {
-      await ai.configure(settings.llmProvider, settings.llmApiKey, settings.llmModel);
-      const result = await ai.generateScript({ genre: '测试', style: '测试', duration: 30, keyword: '测试API连接' });
-      if (result.success) {
-        setTestResult('✅ API 连接成功！已生成测试剧本');
-      } else {
-        setTestResult(`❌ API 错误：${result.error || '未知错误'}`);
-      }
+      const r = await ai.testConnection(settings.llmProvider, settings.llmApiKey, settings.llmModel);
+      setTestResult(r.result || r.error || '连接失败');
     } catch (e: any) {
-      setTestResult(`❌ 连接失败：${e.message}`);
+      setTestResult('❌ ' + (e.message || '连接异常'));
     }
   };
 
-  const providers = [
-    { value: 'deepseek', label: 'DeepSeek', desc: '性价比高，推荐首选' },
-    { value: 'openai', label: 'OpenAI', desc: '需要海外网络' },
-    { value: 'siliconflow', label: 'SiliconFlow', desc: '国内可用，需注册' },
-    { value: 'glm', label: '智谱 GLM', desc: '国内可用，稳定' },
-  ];
-
   return (
     <div className="animate-fade-in" style={{ maxWidth: 750 }}>
+      {/* Toast通知 */}
       {saved && (
         <div style={{
           position: 'fixed', top: 60, right: 24, padding: '10px 20px',
-          borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 600,
-          fontSize: 14, zIndex: 1000, animation: 'fadeIn 0.3s',
+          borderRadius: 8, background: 'linear-gradient(135deg, #10b981, #059669)',
+          color: '#fff', fontWeight: 600, fontSize: 14, zIndex: 1000,
+          animation: 'fadeIn 0.3s', boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+          display: 'flex', alignItems: 'center', gap: 6,
         }}>
-          ✅ 设置已保存
+          <span>✅</span> 设置已保存
         </div>
       )}
 
-      {/* AI 模型配置 */}
-      <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 16 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>🧠 AI 模型配置</h3>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>至少配置一个语言模型 API 密钥才能生成剧本</p>
+      {/* ===== 分区 1: AI模型 ===== */}
+      <SectionCard icon="🧠" title="AI 模型配置" subtitle="至少配置一个语言模型 API 密钥才能使用 AI 功能">
+        <ProviderGrid providers={providers} selected={settings.llmProvider} onSelect={(v) => setSettings({...settings, llmProvider: v})} />
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>AI 供应商</label>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {providers.map((p) => (
-              <button key={p.value} onClick={() => setSettings({ ...settings, llmProvider: p.value })}
-                style={{
-                  padding: '8px 16px', borderRadius: 8,
-                  border: `1px solid ${settings.llmProvider === p.value ? 'var(--accent)' : 'var(--border)'}`,
-                  background: settings.llmProvider === p.value ? 'var(--accent)' : 'var(--bg-secondary)',
-                  color: settings.llmProvider === p.value ? '#fff' : 'var(--text-primary)',
-                  cursor: 'pointer', textAlign: 'left', fontSize: 13,
-                }}>
-                <div style={{ fontWeight: 600 }}>{p.label}</div>
-                <div style={{ fontSize: 11, opacity: 0.7 }}>{p.desc}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>API Key</label>
+        <FieldRow label="API Key" tip="建议使用 DeepSeek，国内直接访问">
           <input value={settings.llmApiKey}
             onChange={(e) => setSettings({ ...settings, llmApiKey: e.target.value })}
-            placeholder="sk-..." type="password"
-            style={{
-              width: '100%', padding: '8px 12px', borderRadius: 8,
-              border: '1px solid var(--border)', background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)', fontSize: 14, outline: 'none',
-            }}
-          />
-        </div>
+            placeholder="sk-..." type="password" className="input" />
+        </FieldRow>
 
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>模型名称</label>
+        <FieldRow label="模型名称">
           <input value={settings.llmModel}
             onChange={(e) => setSettings({ ...settings, llmModel: e.target.value })}
-            placeholder="deepseek-chat"
-            style={{
-              width: '100%', padding: '8px 12px', borderRadius: 8,
-              border: '1px solid var(--border)', background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)', fontSize: 14, outline: 'none',
-            }}
-          />
-        </div>
+            placeholder="deepseek-chat" className="input" />
+        </FieldRow>
 
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.6 }}>
-          💡 DeepSeek（sk-...）注册免费赠送额度，无需海外网络。
-          <br />
-          国内用户推荐使用 DeepSeek 或硅基流动（SiliconFlow）。
-        </div>
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={saveSettings}
-            style={{
-              padding: '10px 24px', borderRadius: 8, border: 'none',
-              background: 'var(--accent)', color: '#fff', fontWeight: 600,
-              cursor: 'pointer', fontSize: 14, flex: 1,
-            }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <button onClick={saveSettings} className="btn-primary" style={{ flex: 1 }}>
             💾 保存设置
           </button>
-          <button onClick={testConnection}
-            style={{
-              padding: '10px 24px', borderRadius: 8, border: '1px solid var(--border)',
-              background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600,
-              cursor: 'pointer', fontSize: 14,
-            }}>
+          <button onClick={testConnection} className="btn-secondary">
             🔌 测试连接
           </button>
         </div>
@@ -160,47 +86,113 @@ const SettingsPage: React.FC = () => {
         {testResult && (
           <div style={{
             marginTop: 12, padding: '8px 12px', borderRadius: 8,
-            background: testResult.includes('✅') ? '#10b98122' : testResult.includes('❌') ? '#e8414222' : 'var(--bg-secondary)',
-            border: `1px solid ${testResult.includes('✅') ? '#10b981' : testResult.includes('❌') ? '#e84142' : 'var(--border)'}`,
-            fontSize: 13, color: testResult.includes('✅') ? '#10b981' : testResult.includes('❌') ? '#ff6b6b' : 'var(--text-secondary)',
+            background: testResult.includes('✅') ? '#10b98111' : testResult.includes('❌') ? '#e8414211' : 'var(--bg-secondary)',
+            border: `1px solid ${testResult.includes('✅') ? 'rgba(16,185,129,0.3)' : testResult.includes('❌') ? 'rgba(232,65,66,0.3)' : 'var(--border)'}`,
+            fontSize: 13,
+            color: testResult.includes('✅') ? '#10b981' : testResult.includes('❌') ? '#ff6b6b' : 'var(--text-secondary)',
           }}>
             {testResult}
           </div>
         )}
-      </div>
+      </SectionCard>
 
-      {/* 授权管理 */}
-      <LicenseSection />
+      {/* ===== 分区 2: 授权管理 ===== */}
+      <LicenseSectionCard />
 
-      {/* 多语言翻译设置 */}
-      <TranslationSection />
+      {/* ===== 分区 3: 多语言翻译 ===== */}
+      <TranslationSectionCard />
 
-      {/* Git 远程备份 */}
-      <RepoManagerSection />
+      {/* ===== 分区 4: Git 远程备份 ===== */}
+      <GitSectionCard />
 
-      {/* 其他设置入口 */}
-      {[
-        { title: '⚙️ 输出设置', desc: '短片默认分辨率、格式、字幕样式', soon: true },
-        { title: '🔄 音色更新', desc: '设置音色库自动更新时间', soon: true },
-      ].map((section) => (
-        <div key={section.title} style={{
-          background: 'var(--bg-tertiary)', border: '1px solid var(--border)',
-          borderRadius: 10, padding: '14px 20px', marginBottom: 10,
-          display: 'flex', alignItems: 'center', gap: 14, opacity: section.soon ? 0.5 : 1,
-        }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{section.title}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{section.desc}</div>
-          </div>
-          {section.soon && <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '2px 8px', borderRadius: 4 }}>即将上线</span>}
+      {/* ===== 即将上线 ===== */}
+      <SectionCard icon="🚀" title="更多功能" subtitle="正在开发中" soon badge="coming">
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <SoonTag>⚙️ 输出设置</SoonTag>
+          <SoonTag>🔄 音色更新</SoonTag>
+          <SoonTag>📊 数据分析</SoonTag>
+          <SoonTag>🎨 主题切换</SoonTag>
+          <SoonTag>📁 批量导出</SoonTag>
         </div>
-      ))}
+      </SectionCard>
     </div>
   );
 };
 
-// License activation component
-const LicenseSection: React.FC = () => {
+// ====== Section Card Wrapper ======
+function SectionCard({ icon, title, subtitle, children, soon, badge }: {
+  icon: string; title: string; subtitle?: string; children: React.ReactNode; soon?: boolean; badge?: string;
+}) {
+  return (
+    <div className="settings-card" style={{
+      background: 'var(--bg-tertiary)',
+      border: '1px solid var(--border)',
+      borderRadius: 12, padding: 24, marginBottom: 16,
+      opacity: soon ? 0.55 : 1,
+      transition: 'opacity 0.3s',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: subtitle ? 4 : 16 }}>
+        <span className="settings-card-icon">{icon}</span>
+        <div style={{ flex: 1 }}>
+          <h3 className="settings-card-title">{title}</h3>
+          {subtitle && <p className="settings-card-subtitle">{subtitle}</p>}
+        </div>
+        {badge && (
+          <span className="badge-coming">即将上线</span>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function SoonTag({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      padding: '8px 14px', borderRadius: 8,
+      background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+      fontSize: 13, color: 'var(--text-muted)',
+      display: 'flex', alignItems: 'center', gap: 6,
+    }}>
+      {children}
+      <span className="badge-coming" style={{ marginLeft: 4 }}>soon</span>
+    </div>
+  );
+}
+
+function ProviderGrid({ providers, selected, onSelect }: {
+  providers: any[]; selected: string; onSelect: (v: string) => void;
+}) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label className="field-label">AI 供应商</label>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {providers.map((p) => (
+          <button key={p.value} onClick={() => onSelect(p.value)}
+            className={selected === p.value ? 'provider-btn selected' : 'provider-btn'}>
+            <div className="provider-btn-label">{p.label}</div>
+            <div className="provider-btn-desc">{p.desc}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FieldRow({ label, tip, children }: { label: string; tip?: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <label className="field-label">
+        {label}
+        {tip && <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 12, marginLeft: 8 }}>💡 {tip}</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+// ====== License (美化版) ======
+const LicenseSectionCard: React.FC = () => {
   const [license, setLicense] = useState<any>(null);
   const [key, setKey] = useState('');
   const [edition, setEdition] = useState('professional');
@@ -219,8 +211,8 @@ const LicenseSection: React.FC = () => {
   };
 
   const handleActivate = async () => {
-    if (!key) return;
-    const result = await ai.activateLicense(key, edition);
+    if (!key.trim()) { setMsg('❌ 请输入激活码'); return; }
+    const result = await ai.activateLicense(key.trim(), edition);
     if (result.success) {
       setMsg('✅ 激活成功！已升级为 ' + (result.edition === 'professional' ? '专业版' : '永久版'));
       await loadLicense();
@@ -237,88 +229,80 @@ const LicenseSection: React.FC = () => {
     setTimeout(() => setMsg(''), 3000);
   };
 
+  const editionNames: Record<string, string> = { community: '社区版', professional: '专业版', lifetime: '永久版' };
+  const editionColors: Record<string, string> = { community: '#6b7280', professional: '#e84142', lifetime: '#f59e0b' };
+
   return (
-    <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 16 }}>
-      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>🔑 授权管理</h3>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
-        当前版本：{license?.edition === 'professional' ? '专业版' : license?.edition === 'lifetime' ? '永久版' : '社区版'}
-        {license?.activated ? ' ✅ 已激活' : ''}
-      </p>
+    <SectionCard icon="🔑" title="授权管理" subtitle={`当前版本：${editionNames[license?.edition] || '社区版'} ${license?.activated ? '✅ 已激活' : '❌ 未激活'}`}>
+      {/* 版本状态条 */}
+      <div className="license-status-bar">
+        <div className="license-edition-tag" style={{ background: editionColors[license?.edition || 'community'] + '22', color: editionColors[license?.edition || 'community'], borderColor: editionColors[license?.edition || 'community'] + '44' }}>
+          {editionNames[license?.edition || 'community']}
+        </div>
+        <div className="license-status-dot" style={{ background: license?.activated ? '#10b981' : '#e84142' }} />
+        <span style={{ fontSize: 13, color: license?.activated ? '#10b981' : '#e84142', fontWeight: 500 }}>
+          {license?.activated ? '已激活' : '未激活'}
+        </span>
+      </div>
 
       {msg && (
-        <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: msg.includes('✅') ? '#10b98122' : '#e8414222', border: '1px solid', borderColor: msg.includes('✅') ? '#10b981' : '#e84142', fontSize: 13, color: msg.includes('✅') ? '#10b981' : '#ff6b6b' }}>
+        <div className={`msg-box ${msg.includes('✅') ? 'msg-success' : 'msg-error'}`}>
           {msg}
         </div>
       )}
 
       {!license?.activated ? (
-        <>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>激活码</label>
-            <input value={key} onChange={e => setKey(e.target.value)} placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
-          </div>
+        <div className="license-activation-form">
+          <FieldRow label="激活码">
+            <input value={key} onChange={e => setKey(e.target.value)} placeholder="LOBSTER-XXXX-XXXX-XXXX"
+              className="input" />
+          </FieldRow>
 
           <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>版本</label>
-            {editions.filter(e => e.id !== 'community').map(e => (
-              <button key={e.id} onClick={() => setEdition(e.id)}
-                style={{
-                  marginRight: 8, padding: '6px 14px', borderRadius: 6,
-                  border: '1px solid', borderColor: edition === e.id ? '#e84142' : 'var(--border)',
-                  background: edition === e.id ? '#e8414218' : 'transparent',
-                  color: 'var(--text-primary)', cursor: 'pointer', fontSize: 13,
-                }}>
-                {e.name} {e.price}
-              </button>
-            ))}
+            <label className="field-label">版本选择</label>
+            <div className="edition-grid">
+              {editions.filter((e: any) => e.id !== 'community').map((e: any) => (
+                <button key={e.id} onClick={() => setEdition(e.id)}
+                  className={`edition-card ${edition === e.id ? 'active' : ''}`}>
+                  <div className="edition-name">{e.name}</div>
+                  <div className="edition-price">{e.price}</div>
+                  <div className="edition-features">{(e.features || []).slice(0, 3).join(' · ')}</div>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <button onClick={handleActivate}
-            style={{ padding: '10px 32px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #e84142, #ff6b6b)', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
-            🔑 激活
+          <button onClick={handleActivate} className="btn-primary license-activate-btn">
+            🚀 激活授权
           </button>
-
-          <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-            💡 演示激活码：<code>LOBSTER-PRO-2026-DEMO</code>
-            <br />
-            专业版：¥199/年（支持 AI 生成、视频合成、多平台发布）
-            <br />
-            永久版：¥599（终身更新 + 优先技术支持）
-          </div>
-        </>
+        </div>
       ) : (
-        <button onClick={handleDeactivate}
-          style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13 }}>
-          🔓 解除激活
+        <button onClick={handleDeactivate} className="btn-ghost license-deactivate-btn">
+          🔓 解除激活，恢复社区版
         </button>
       )}
-    </div>
+    </SectionCard>
   );
-}
+};
 
-// Translation language settings
-const TranslationSection: React.FC = () => {
-  const [regions, setRegions] = useState<Record<string, any>>({});
-  const [selectedRegion, setSelectedRegion] = useState<string>('');
-  const [targetLang, setTargetLang] = useState<string>('');
+// ====== Translation (美化版) ======
+const TranslationSectionCard: React.FC = () => {
+  const [selectedRegion, setSelectedRegion] = useState('');
+  const [targetLang, setTargetLang] = useState('');
   const [bilingual, setBilingual] = useState(true);
   const [autoTranslate, setAutoTranslate] = useState(true);
-  const [saved, setSaved] = useState('');
+  const [regionGroups, setRegionGroups] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     async function init() {
       const groups = await translate.regionGroup();
-      setRegions(groups);
-
-      // Load saved preferences
+      setRegionGroups(groups);
       const savedLang = await db.getSetting('translationTargetLang');
       const savedRegion = await db.getSetting('translationTargetRegion');
       const savedBilingual = await db.getSetting('translationBilingual');
       const savedAuto = await db.getSetting('translationAuto');
-
       if (savedLang) setTargetLang(savedLang);
-      if (savedRegion) { setSelectedRegion(savedRegion); }
+      if (savedRegion && groups[savedRegion]) setSelectedRegion(savedRegion);
       else if (Object.keys(groups).length > 0) setSelectedRegion(Object.keys(groups)[0]);
       if (savedBilingual === 'false') setBilingual(false);
       if (savedAuto === 'false') setAutoTranslate(false);
@@ -326,235 +310,127 @@ const TranslationSection: React.FC = () => {
     init();
   }, []);
 
-  const handleSave = async () => {
-    await db.setSetting('translationTargetLang', targetLang);
-    await db.setSetting('translationTargetRegion', selectedRegion);
-    await db.setSetting('translationBilingual', bilingual ? 'true' : 'false');
-    await db.setSetting('translationAuto', autoTranslate ? 'true' : 'false');
-    setSaved('✅ 翻译设置已保存');
-    setTimeout(() => setSaved(''), 2500);
+  const saveLangSettings = async (lang: string, region: string, bil: boolean, auto: boolean) => {
+    await Promise.all([
+      db.setSetting('translationTargetLang', lang),
+      db.setSetting('translationTargetRegion', region),
+      db.setSetting('translationBilingual', bil ? 'true' : 'false'),
+      db.setSetting('translationAuto', auto ? 'true' : 'false'),
+    ]);
   };
 
-  const currentLang = regions[selectedRegion]?.languages || [];
-  const selectedLangInfo = currentLang.find((l: any) => l.code === targetLang);
-
   return (
-    <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 16 }}>
-      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>🌐 多语言翻译设置</h3>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
-        设置默认翻译语言，用于海外平台发布
-        {targetLang && selectedLangInfo && (
-          <span style={{ marginLeft: 8, color: 'var(--accent)' }}>
-            当前: {selectedLangInfo.flag} {selectedLangInfo.nativeName}
-          </span>
-        )}
-      </p>
-
-      {/* Region selector */}
-      <div style={{ marginBottom: 12 }}>
-        <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>选择区域</label>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {Object.entries(regions).map(([key, region]: [string, any]) => (
-            <button key={key} onClick={() => { setSelectedRegion(key); setTargetLang(''); }}
-              style={{
-                padding: '6px 12px', borderRadius: 6,
-                border: `1px solid ${selectedRegion === key ? 'var(--accent)' : 'var(--border)'}`,
-                background: selectedRegion === key ? 'var(--accent)' : 'var(--bg-secondary)',
-                color: selectedRegion === key ? '#fff' : 'var(--text-primary)',
-                cursor: 'pointer', fontSize: 12,
-              }}>
-              {region.name} ({region.languages?.length || 0})
+    <SectionCard icon="🌐" title="多语言翻译" subtitle="设置目标语言，Pipeline 和 Publish 将自动翻译字幕和元数据">
+      {/* Region tabs */}
+      {Object.keys(regionGroups).length > 0 && (
+        <div className="region-tabs">
+          {Object.keys(regionGroups).map(r => (
+            <button key={r} onClick={() => setSelectedRegion(r)}
+              className={`region-tab ${selectedRegion === r ? 'active' : ''}`}>
+              {r}
             </button>
           ))}
         </div>
-      </div>
+      )}
 
       {/* Language grid */}
-      {currentLang.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>选择目标语言</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 4 }}>
-            {currentLang.map((lang: any) => (
-              <button key={lang.code} onClick={() => setTargetLang(lang.code)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6,
-                  border: `1px solid ${targetLang === lang.code ? 'var(--accent)' : 'var(--border)'}`,
-                  background: targetLang === lang.code ? 'var(--accent)22' : 'var(--bg-secondary)',
-                  color: 'var(--text-primary)', cursor: 'pointer', fontSize: 12, textAlign: 'left',
-                }}>
-                <span style={{ fontSize: 16 }}>{lang.flag}</span>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: targetLang === lang.code ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {lang.nativeName}
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                    {lang.name} {lang.direction === 'rtl' ? '🔁' : ''}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+      {selectedRegion && regionGroups[selectedRegion] && (
+        <div className="lang-grid">
+          {regionGroups[selectedRegion].map((lang: any) => (
+            <button key={lang.code} onClick={() => { setTargetLang(lang.code); saveLangSettings(lang.code, selectedRegion, bilingual, autoTranslate); }}
+              className={`lang-card ${targetLang === lang.code ? 'active' : ''}`}>
+              <div className="lang-flag">{lang.flag || '🌍'}</div>
+              <div className="lang-name">{lang.name}</div>
+              <div className="lang-native">{lang.native || lang.name}</div>
+              {lang.rtl && <div className="lang-rtl-badge">RTL</div>}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Settings toggles */}
-      <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-          <input type="checkbox" checked={bilingual} onChange={e => setBilingual(e.target.checked)}
-            style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-          双语字幕（原文 + 翻译并列显示）
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)' }}>
-          <input type="checkbox" checked={autoTranslate} onChange={e => setAutoTranslate(e.target.checked)}
-            style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-          自动翻译（发布时自动翻译为选中语言）
-        </label>
+      {/* Toggles */}
+      <div className="translation-toggles">
+        <Toggle checked={bilingual} onChange={setBilingual} label="双语字幕（原文 + 译文）" />
+        <Toggle checked={autoTranslate} onChange={setAutoTranslate} label="发布时自动翻译（Pipeline / Publish）" />
       </div>
-
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <button onClick={handleSave}
-          style={{
-            padding: '10px 24px', borderRadius: 8, border: 'none',
-            background: 'var(--accent)', color: '#fff', fontWeight: 600,
-            cursor: 'pointer', fontSize: 14, flex: 1,
-          }}>
-          💾 保存翻译设置
-        </button>
-        {saved && <span style={{ fontSize: 13, color: '#10b981' }}>{saved}</span>}
-      </div>
-
-      {/* Stats */}
-      <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 6, background: 'var(--bg-secondary)', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-        支持 50 种语言 · 4 种 RTL方向（阿拉伯语/乌尔都语/希伯来语/波斯语）· SRT/ASS双语字幕格式
-        · 自动适配海外平台语言要求
-      </div>
-    </div>
+    </SectionCard>
   );
 };
 
-// Separate component for Git backup
-const RepoManagerSection: React.FC = () => {
-  const [status, setStatus] = useState<any>(null);
-  const [remoteUrl, setRemoteUrl] = useState('');
-  const [remoteName, setRemoteName] = useState('origin');
-  const [msg, setMsg] = useState('');
-  const [commitMsg, setCommitMsg] = useState('auto backup');
-  const [loading, setLoading] = useState('');
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label className="toggle-row">
+      <div className={`toggle-switch ${checked ? 'on' : ''}`} onClick={() => onChange(!checked)}>
+        <div className="toggle-knob" />
+      </div>
+      <span className="toggle-label">{label}</span>
+    </label>
+  );
+}
 
-  useEffect(() => { refreshStatus(); }, []);
+// ====== Git (美化版) ======
+const GitSectionCard: React.FC = () => {
+  const [repoUrl, setRepoUrl] = useState('');
+  const [gitToken, setGitToken] = useState('');
+  const [gitStatus, setGitStatus] = useState('');
+  const [gitMsg, setGitMsg] = useState('');
 
-  const refreshStatus = async () => {
-    const s = await ai.gitStatus();
-    setStatus(s);
-    if (s.remotes?.length > 0) {
-      setRemoteUrl(s.remotes[0].url);
-      setRemoteName(s.remotes[0].name);
+  useEffect(() => {
+    db.getSetting('gitRemoteUrl').then(v => { if (v) setRepoUrl(v); });
+    db.getSetting('gitToken').then(v => { if (v) setGitToken(v); });
+    ai.gitStatus().then((r: any) => {
+      if (r.success) {
+        const s = r.data;
+        setGitStatus(`分支: ${s.branch} · 最新: ${s.commit?.substring(0, 8)} · ${s.ahead ? s.ahead + ' ahead' : '同步'}`);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleGitPush = async () => {
+    setGitMsg('⏳ 正在连接远端...');
+    try {
+      await db.setSetting('gitRemoteUrl', repoUrl);
+      await db.setSetting('gitToken', gitToken);
+      const r = await ai.gitPush(repoUrl, gitToken);
+      setGitMsg(r.success ? '✅ 推送成功！' : '❌ ' + (r.error || '推送失败'));
+    } catch (e: any) {
+      setGitMsg('❌ ' + (e.message || '异常'));
     }
-  };
-
-  const handleSetRemote = async () => {
-    if (!remoteUrl) return;
-    setLoading('remote');
-    await ai.gitSetRemote(remoteName, remoteUrl);
-    await refreshStatus();
-    setMsg('✅ 远程仓库已设置');
-    setLoading('');
-    setTimeout(() => setMsg(''), 3000);
-  };
-
-  const handlePush = async () => {
-    setLoading('push');
-    const result = await ai.gitCommitAndPush(commitMsg, remoteName || 'origin');
-    setMsg(result.success ? '✅ 推送成功！' : '❌ ' + (result.error || '推送失败'));
-    setLoading('');
-    await refreshStatus();
-    setTimeout(() => setMsg(''), 5000);
+    setTimeout(() => setGitMsg(''), 5000);
   };
 
   return (
-    <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 16 }}>
-      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>🔒 Git 远程备份</h3>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
-        将项目代码备份到 GitHub / Gitee
-      </p>
+    <SectionCard icon="🔒" title="Git 远程备份" subtitle="将项目备份到 GitHub / Gitee，防止数据丢失">
+      <FieldRow label="仓库地址" tip="https://github.com/用户名/仓库.git">
+        <input value={repoUrl} onChange={e => setRepoUrl(e.target.value)} placeholder="https://github.com/xxx/lobster-studio.git" className="input" />
+      </FieldRow>
 
-      {!status ? (
-        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>正在获取状态...</div>
-      ) : (
-        <>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 8, background: 'var(--bg-secondary)', fontSize: 12 }}>
-            <span>📂 <strong>{status.branch}</strong></span>
-            <span>🔖 <code>{status.commit}</code></span>
-            <span>{status.hasChanges ? `📝 ${status.fileCount} 个文件待提交` : '✅ 工作区干净'}</span>
-          </div>
+      <FieldRow label="Token / 密码">
+        <input value={gitToken} onChange={e => setGitToken(e.target.value)} placeholder="ghp_..." type="password" className="input" />
+      </FieldRow>
 
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>远程仓库地址</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={remoteUrl}
-                onChange={e => setRemoteUrl(e.target.value)}
-                placeholder="https://github.com/用户名/仓库名.git"
-                style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
-              />
-              <button onClick={handleSetRemote} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: loading === 'remote' ? 'var(--border)' : 'var(--accent)', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
-                {loading === 'remote' ? '...' : '绑定'}
-              </button>
-            </div>
-          </div>
-
-          {status.remotes?.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-              {status.remotes.map((r: any) => (
-                <div key={r.name} style={{ padding: '4px 10px', borderRadius: 6, background: '#10b98122', border: '1px solid #10b98144', fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {r.type === 'github' ? '🐙' : '🔗'} {r.name}: {r.url}
-                  <button onClick={() => { ai.gitRemoveRemote(r.name).then(() => refreshStatus()); }}
-                    style={{ background: 'none', border: 'none', color: '#e84142', cursor: 'pointer', padding: 0, fontSize: 14 }}>
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {status.hasChanges && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>提交说明</label>
-              <input value={commitMsg} onChange={e => setCommitMsg(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
-              />
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handlePush} disabled={loading === 'push'}
-              style={{ padding: '10px 24px', borderRadius: 8, border: 'none', background: loading === 'push' ? 'var(--border)' : '#10b981', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 14, flex: 1 }}>
-              {loading === 'push' ? '⏳ 提交并推送中...' : '⬆️ 提交并推送'}
-            </button>
-            <button onClick={refreshStatus}
-              style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13 }}>
-              🔄 刷新
-            </button>
-          </div>
-
-          {msg && (
-            <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: msg.includes('✅') ? '#10b98122' : '#e8414222', border: `1px solid ${msg.includes('✅') ? '#10b981' : '#e84142'}`, fontSize: 13, color: msg.includes('✅') ? '#10b981' : '#ff6b6b' }}>
-              {msg}
-            </div>
-          )}
-
-          {status.recentLog?.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>最近提交：</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-                {status.recentLog.map((line: string, i: number) => (
-                  <div key={i} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{line}</div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+      {gitStatus && (
+        <div className="git-status-bar">
+          <span>📡 {gitStatus}</span>
+        </div>
       )}
-    </div>
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+        <button onClick={handleGitPush} className="btn-primary" style={{ flex: 1 }}>
+          📤 推送到远端
+        </button>
+        <button onClick={async () => { const r = await ai.gitStatus(); setGitStatus(r.success ? `分支: ${r.data.branch} · ${r.data.commit?.substring(0, 8)}` : '状态未知'); }}
+          className="btn-secondary">
+          🔄 刷新
+        </button>
+      </div>
+
+      {gitMsg && (
+        <div className={`msg-box ${gitMsg.includes('✅') ? 'msg-success' : gitMsg.includes('❌') ? 'msg-error' : ''}`} style={{ marginTop: 12 }}>
+          {gitMsg}
+        </div>
+      )}
+    </SectionCard>
   );
 };
 

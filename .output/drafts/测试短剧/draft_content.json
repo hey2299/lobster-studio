@@ -1,0 +1,115 @@
+{
+  "version": "3.2.0",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 24
+  },
+  "materials": [
+    {
+      "id": "M1",
+      "type": "video",
+      "path": "materials/scene_1.png",
+      "width": 1080,
+      "height": 1920,
+      "duration": 4000000,
+      "fps": 24
+    },
+    {
+      "id": "M2",
+      "type": "video",
+      "path": "materials/scene_2.png",
+      "width": 1080,
+      "height": 1920,
+      "duration": 3000000,
+      "fps": 24
+    }
+  ],
+  "tracks": [
+    {
+      "id": "T0",
+      "type": "main",
+      "segments": [
+        {
+          "id": "S1",
+          "material_id": "M1",
+          "type": "video",
+          "start_time": 0,
+          "end_time": 4000000,
+          "duration": 4000000,
+          "transform": {
+            "scale": 1,
+            "rotation": 0,
+            "position": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "speed": 1,
+          "volume": 1
+        },
+        {
+          "id": "S2",
+          "material_id": "M2",
+          "type": "video",
+          "start_time": 4000000,
+          "end_time": 7000000,
+          "duration": 3000000,
+          "transform": {
+            "scale": 1,
+            "rotation": 0,
+            "position": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "speed": 1,
+          "volume": 1
+        }
+      ]
+    }
+  ],
+  "duration": 7000000,
+  "subtitles": [
+    {
+      "id": "SUB_1_1",
+      "type": "subtitle",
+      "start_time": 0,
+      "end_time": 4000000,
+      "style": {
+        "font_size": 36,
+        "font_color": "#FFFFFF",
+        "outline_color": "#000000",
+        "outline_width": 2,
+        "alignment": "bottom_center",
+        "font_family": "Microsoft YaHei",
+        "bold": false
+      }
+    },
+    {
+      "id": "SUB_2_1",
+      "type": "subtitle",
+      "start_time": 4000000,
+      "end_time": 7000000,
+      "style": {
+        "font_size": 36,
+        "font_color": "#FFFFFF",
+        "outline_color": "#000000",
+        "outline_width": 2,
+        "alignment": "bottom_center",
+        "font_family": "Microsoft YaHei",
+        "bold": false
+      }
+    }
+  ],
+  "audio_settings": {
+    "master_volume": 1
+  },
+  "export_settings": {
+    "resolution": "1080x1920",
+    "fps": 24,
+    "bitrate": 8000000,
+    "format": "mp4",
+    "codec": "h264"
+  }
+}

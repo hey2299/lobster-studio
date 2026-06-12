@@ -253,4 +253,181 @@ async function publishVideo(platformId, videoPath, metadata) {
   return result;
 }
 
-module.exports = { getPlatforms, publishVideo, getPublishHistory, addPublishRecord, clearPublishHistory };
+// --- YouTube SEO Generator ---
+// Generates localized title, description, and tags for each platform
+const SEO_TEMPLATES = {
+  youtube: {
+    patterns: ['drama', 'shortfilm', 'series', 'love', 'story'],
+    maxTitleLength: 100,
+    maxDescriptionLength: 5000,
+    maxTags: 30,
+    lang: { en: 'English', zh: '中文' },
+  },
+  tiktok: {
+    patterns: ['#shorts', 'trending', 'fyp'],
+    maxTitleLength: 150,
+    maxDescriptionLength: 2200,
+    maxTags: 20,
+  },
+  instagram: {
+    patterns: ['reels', 'drama', 'shortfilm'],
+    maxTitleLength: 2200,
+    maxDescriptionLength: 2200,
+    maxTags: 30,
+  },
+};
+
+// Pre-built SEO keywords for short drama genres (EN + ZH)
+const SEO_KEYWORDS = {
+  romance: {
+    en: ['love story', 'romantic drama', 'romance short film', 'emotional story', 'relationship goals', 'sweet love', 'couple goals', 'heart touching', 'short drama romance', 'love triangle'],
+    zh: ['爱情短剧', '霸道总裁', '甜宠', '虐恋情深', '高甜', '玛丽苏', '爱情故事', '女朋友', '男朋友', '情侣'],
+  },
+  comedy: {
+    en: ['comedy sketch', 'funny short film', 'hilarious drama', 'comedy series', 'laugh out loud', 'funny moments', 'comedy gold', 'skit comedy', 'parody short drama', 'humor'],
+    zh: ['搞笑短剧', '喜剧', '沙雕', '搞笑视频', '段子', '恶搞', '幽默', '笑到肚子疼'],
+  },
+  suspense: {
+    en: ['suspense drama', 'thriller short film', 'mystery story', 'plot twist', 'psychological thriller', 'edge of seat', 'dark mystery', 'crime drama', 'unexpected ending', 'mind blowing'],
+    zh: ['悬疑短剧', '反转', '烧脑', '高能', '惊悚', '推理', '恐怖', '剧情反转', '神秘'],
+  },
+  fantasy: {
+    en: ['fantasy drama', 'supernatural short film', 'magical story', 'fantasy series', 'mythical drama', 'time travel drama', 'portal fantasy', 'otherworldly', 'reborn', 'transmigration'],
+    zh: ['玄幻短剧', '穿越', '重生', '修仙', '仙侠', '魔法', '奇幻', '逆袭', '异能'],
+  },
+  urban: {
+    en: ['urban drama', 'modern love', 'city story', 'workplace romance', 'contemporary drama', 'slice of life', 'urban series', 'corporate drama', 'city life', 'modern romance'],
+    zh: ['都市短剧', '职场', '豪门', '现代爱情', '商战', '契约婚姻', '都市情感', '破镜重圆'],
+  },
+  ancient: {
+    en: ['historical drama', 'ancient romance', 'costume drama', 'imperial love', 'historical short drama', 'period drama', 'ancient china', 'wuxia short film', 'martial arts', 'royal drama'],
+    zh: ['古装短剧', '宫斗', '宅斗', '权谋', '古代爱情', '王妃', '皇帝', '江湖', '武侠', '仙侠'],
+  },
+  campus: {
+    en: ['campus drama', 'school love story', 'teen romance', 'high school drama', 'college romance', 'young love', 'school crush', 'youth drama', 'classroom romance', 'prom'],
+    zh: ['校园短剧', '青春', '纯爱', '同桌', '校花', '学霸', '校园恋爱', '初恋'],
+  },
+};
+
+const SEO_CALL_TO_ACTIONS = {
+  en: [
+    'Watch till the end for a shocking twist! 🔥',
+    'Like and subscribe for more short dramas! 👍',
+    "Don't forget to share with your friends!",
+    'Comment below what you think will happen next! 💬',
+    'New episodes every week! Hit the bell 🔔',
+    'Which character is your favorite? Let me know!',
+    'This story will change how you see love... 💕',
+    'Tag someone who needs to see this! 👇',
+  ],
+  zh: [
+    '看到最后有反转！🔥',
+    '点赞关注看更多短剧！👍',
+    '转发给你的朋友一起看！',
+    '评论区告诉我你觉得接下来会发生什么！💬',
+    '每周更新，记得关注！🔔',
+    '你最喜欢哪个角色？评论区告诉我！',
+    '这个故事让你重新相信爱情了吗？💕',
+  ],
+};
+
+function generateSEOMetadata(platformId, project, options = {}) {
+  const {
+    genre = 'romance',
+    title = project.title || 'Untitled Drama',
+    description = '',
+    lang = 'zh',
+    characters = [],
+    episodeNumber = 1,
+    totalEpisodes = 1,
+  } = options;
+
+  const template = SEO_TEMPLATES[platformId] || SEO_TEMPLATES.youtube;
+  const keywords = SEO_KEYWORDS[genre] || SEO_KEYWORDS.romance;
+  const ctaList = SEO_CALL_TO_ACTIONS[lang] || SEO_CALL_TO_ACTIONS.zh;
+
+  // Generate title
+  const baseTitle = title.length > 40 ? title.substring(0, 37) + '...' : title;
+  const episodeStr = totalEpisodes > 1 ? ` Ep.${episodeNumber}/${totalEpisodes}` : '';
+  const langSuffix = lang === 'en' ? ' | Short Drama' : ' | 短剧';
+  let seoTitle = `${baseTitle}${episodeStr}${langSuffix}`;
+  if (seoTitle.length > template.maxTitleLength) {
+    seoTitle = seoTitle.substring(0, template.maxTitleLength - 3) + '...';
+  }
+
+  // Generate description (structured)
+  const cta = ctaList[Math.floor(Math.random() * ctaList.length)];
+  const genreNames = {
+    en: { romance: 'Romance', comedy: 'Comedy', suspense: 'Suspense', fantasy: 'Fantasy', urban: 'Urban', ancient: 'Period', campus: 'Campus' },
+    zh: { romance: '浪漫', comedy: '喜剧', suspense: '悬疑', fantasy: '奇幻', urban: '都市', ancient: '古装', campus: '校园' },
+  };
+  const genreName = (genreNames[lang] || genreNames.en)[genre] || genre;
+
+  let seoDescription = '';
+  if (lang === 'en') {
+    seoDescription = `${genreName} short drama\n\n${description || title}\n\n`;
+    seoDescription += `📺 Episode ${episodeNumber}${totalEpisodes > 1 ? ` / ${totalEpisodes}` : ''}\n`;
+    if (characters.length > 0) {
+      seoDescription += `👥 Characters: ${characters.map(c => c.name + (c.role ? ` (${c.role})` : '')).join(', ')}\n`;
+    }
+    seoDescription += `\n${cta}\n\n`;
+    seoDescription += `#shortdrama #${genre} #series\n`;
+  } else {
+    seoDescription = `【${genreName}短剧】\n\n${description || title}\n\n`;
+    seoDescription += `📺 第${episodeNumber}集${totalEpisodes > 1 ? ` / 共${totalEpisodes}集` : ''}\n`;
+    if (characters.length > 0) {
+      seoDescription += `👥 角色：${characters.map(c => c.name + (c.role ? `（${c.role}）` : '')).join('、')}\n`;
+    }
+    seoDescription += `\n${cta}\n\n`;
+    seoDescription += `#短剧 #${genre} #系列\n`;
+  }
+
+  if (seoDescription.length > template.maxDescriptionLength) {
+    seoDescription = seoDescription.substring(0, template.maxDescriptionLength - 3) + '...';
+  }
+
+  // Generate optimized tags
+  const kwList = lang === 'en' ? keywords.en : keywords.zh;
+  const baseTags = [...kwList];
+  
+  // Add platform-specific tags
+  if (platformId === 'youtube') {
+    baseTags.push('short drama', 'short film', 'drama series');
+  } else if (platformId === 'tiktok') {
+    baseTags.push('fyp', 'viral', 'foryou', 'foryoupage');
+  }
+  
+  // Add genre tags in both languages if bilingual
+  if (lang === 'en') {
+    baseTags.push('短剧', genre);
+  } else {
+    baseTags.push('short drama', 'kdrama', genre);
+  }
+
+  // Deduplicate and limit
+  const tags = [...new Set(baseTags.map(t => t.toLowerCase().replace(/[^a-z一-鿿0-9#]/g, '')))]
+    .filter(Boolean)
+    .slice(0, template.maxTags);
+
+  return {
+    title: seoTitle,
+    description: seoDescription,
+    tags,
+    // Also export raw fields so user can edit
+    raw: {
+      title: options.title || project.title || '',
+      description: options.description || '',
+    },
+  };
+}
+
+function getSEOKeywords(genre) {
+  const kw = SEO_KEYWORDS[genre];
+  if (!kw) return { en: [], zh: [] };
+  return {
+    en: [...kw.en],
+    zh: [...kw.zh],
+  };
+}
+
+module.exports = { getPlatforms, publishVideo, getPublishHistory, addPublishRecord, clearPublishHistory, generateSEOMetadata, getSEOKeywords };
