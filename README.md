@@ -69,6 +69,9 @@ lobster-studio/
 
 ## 🚀 快速开始
 
+### 在线体验
+直接在浏览器访问：**[https://hey2299.github.io/lobster-studio/](https://hey2299.github.io/lobster-studio/)**
+
 ### 前置条件
 - **Node.js** ≥ 18 (已安装 v22.19.0)
 - **npm** (已安装 10.9.3)
@@ -110,7 +113,9 @@ node scripts/build-installer.js
 node scripts/build-mobile.js
 ```
 
-## 🧪 测试覆盖 (64/64 通过)
+## 🧪 测试覆盖 (64/64 自测 + 43/43 全链路)
+
+### 离线自测 `node scripts/self-test.js` — 64/64 ✅
 
 | 模块 | 断言数 | 状态 |
 |------|--------|------|
@@ -128,6 +133,18 @@ node scripts/build-mobile.js
 | ai-engine.js | 1 | ✅ |
 | user-account.js | 6 | ✅ |
 | project-pack.js | 4 | ✅ |
+
+### 全链路实机测试 `node scripts/e2e-live-test.js` — 43/43 ✅
+
+| 阶段 | 测试项 | 结果 |
+|------|--------|------|
+| Phase 1 | 12模块加载 | ✅ |
+| Phase 2 | 向量记忆 + 授权系统 | ✅ |
+| Phase 3 | BGM/字幕/导出/自适应/翻译/发布 | ✅ |
+| Phase 4 | AI剧本/AI角色增强/AI翻译/ASS双语 | ✅ (DeepSeek API)
+| Phase 5 | 项目打包导入/发布记录 | ✅ |
+
+> 需要 API Key（DeepSeek/OpenAI/硅基流动），设置环境变量 `DEEPSEEK_API_KEY` 运行。
 
 ## 🔧 核心架构
 
@@ -152,10 +169,27 @@ node scripts/build-mobile.js
 ### 翻译 (50种语言，15个区域)
 全球 / 中国 / 南亚 / 西班牙语 / 法语 / 中东 / 斯拉夫 / 罗曼 / 日耳曼 / 北欧 / 东亚 / 东南亚 / 西斯拉夫 / 芬兰-乌戈尔 / 巴尔干 / 非洲 / 中亚
 
+## 🌐 在线演示
+
+> [https://hey2299.github.io/lobster-studio/](https://hey2299.github.io/lobster-studio/)
+
+GitHub Pages 部署，PWA 支持，可在手机浏览器中安装到桌面。
+
+```bash
+# 部署到 GitHub Pages（需在仓库 Settings 中启用 Pages）
+node scripts/deploy-gh-pages.js
+```
+
 ## 📜 版本历史
 
 ```
-23 commits (master)
+29 commits (master)
+├─ 55aed94 Add: GitHub Pages deploy script
+├─ ca5e9db Fix: e2e-live-test 43/43 all green
+├─ b4452d7 Add: Batch export (SRT+ASS+CapCut+FCPXML+BGM)
+├─ 7c976cc Add: Scene preview player + drag-to-reorder
+├─ 3f1c184 Fix: e2e-live-test.js v1.1 — all AI calls verified
+├─ 6b5924d Add: Comprehensive README with full project map
 ├─ 7f29aa0 Add: Responsive layout + mobile sidebar
 ├─ a2e3162 Add: Theme switch + upgraded Dashboard + Pipeline fix
 ├─ 1cd1d90 Add: Full-chain live test suite + E2E test guide
@@ -167,7 +201,7 @@ node scripts/build-mobile.js
 ```
 
 ## ⚠️ 已知限制
-- **GitHub推送**: 目标仓库 `hey2299/lobster-studio` 网络不可达
+- **FFmpeg WASM**: 30MB+，性能低于原生
 - **FFmpeg WASM**: 30MB+，性能低于原生
 - **sql.js**: 同步API，大文档需分页
 - **Electron**: 需 display server（Windows桌面）
