@@ -35,6 +35,44 @@ const PipelinePage: React.FC = () => {
   useEffect(() => {
     loadOutputs();
     loadTranslationSettings();
+
+    // Auto-detect trending config from Dashboard
+    try {
+      const raw = sessionStorage.getItem('lobster_trending_config');
+      if (raw) {
+        const cfg = JSON.parse(raw);
+        sessionStorage.removeItem('lobster_trending_config');
+        // Auto-apply trending config: load demo scenes based on genre
+        setProjectName(`${cfg.title.replace(/^\S+\s/, '')} — ${cfg.config.genre}${cfg.config.mood}`);
+        setProgressMsg(`✅ 已加载推荐配置：「${cfg.title}」— 点击启动一键制作`);
+        // Generate scenes from config
+        const colors = ['#e84142', '#4a6cf7', '#10b981', '#f59e0b', '#7c3aed', '#06b6d4', '#f97316', '#8b5cf6', '#14b8a6'];
+        const trendingScenes: PipelineScene[] = (cfg.config.plotPoints || []).map((point: string, i: number) => ({
+          id: 'trending_' + i,
+          index: i,
+          location: i === 0 ? cfg.config.genre === '穿越' || cfg.config.genre === '修仙' ? '场景' + (i+1) : (['豪华别墅','办公室','天台','医院','花园','咖啡厅','酒店','公园','机场'][i] || '场景' + (i+1)) : (['豪华别墅','办公室','天台','医院','花园','咖啡厅','酒店','公园','机场'][i % 9] || '场景' + (i+1)),
+          description: point,
+          mood: ['紧张', '冲突', '浪漫', '悲伤', '反转', '冲突', '浪漫', '平静', '幸福'][i % 9],
+          cameraAngle: ['中景', '近景', '特写', '全景', '跟拍', '近景', '特写', '全景', '远景'][i % 9],
+          dialogue: (cfg.config.characters || []).slice(0, 2).map((ch: any, di: number) => ({
+            characterName: ch.name,
+            line: di === 0 ? point.substring(0, 20) + '...' : '...（反应台词）',
+            emotion: ['冷峻', '惊讶', '深情', '愤怒', '感动'][(i + di) % 5],
+          })),
+          imageDataUrl: (() => {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"><defs><linearGradient id="bg"><stop offset="0%" style="stop-color:${colors[i % colors.length]}"/><stop offset="100%" style="stop-color:#000"/></linearGradient></defs><rect width="1920" height="1080" fill="url(#bg)"/><rect x="100" y="100" width="1720" height="600" rx="20" fill="rgba(255,255,255,0.05)"/><text x="960" y="350" text-anchor="middle" fill="white" font-size="64" font-family="sans-serif" font-weight="bold">${cfg.config.genre} · ${cfg.config.mood}</text><text x="960" y="430" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="24" font-family="sans-serif">${point.substring(0, 30)}${point.length > 30 ? '...' : ''}</text><text x="960" y="1000" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="18">一键制作 · ${cfg.title}</text></svg>`;
+            return 'data:image/svg+xml;base64,' + btoa(svg);
+          })(),
+          audioDataUrl: '',
+          duration: Math.round((cfg.config.duration || 60) / (cfg.config.plotPoints?.length || 5)),
+        }));
+        setScenes(trendingScenes);
+        setTimeout(() => setProgressMsg(''), 4000);
+      }
+    } catch (e) {
+      console.log('No trending config loaded');
+    }
+
     return onAIProgress((data: any) => {
       setProgressMsg(data.message);
       if (data.done && data.step === 'video') {

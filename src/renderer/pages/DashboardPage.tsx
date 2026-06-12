@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PageKey } from '../App';
+import TRENDING_CONFIGS from './trending-configs';
 
 interface Props {
   onNavigate: (page: PageKey) => void;
+  onApplyTrending: (config: any) => void;
   stats: { projects: number; characters: number };
 }
 
@@ -21,7 +23,20 @@ const workflowSteps = [
   { label: '多平台发布', page: 'publish' as PageKey, desc: '国内海外一键分发', icon: '🚀' },
 ];
 
-const DashboardPage: React.FC<Props> = ({ onNavigate, stats }) => {
+const DashboardPage: React.FC<Props> = ({ onNavigate, onApplyTrending, stats }) => {
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+
+  const handleApplyAndMake = (config: any) => {
+    setApplyingId(config.id);
+    // Save trending config to sessionStorage so Pipeline can pick it up
+    try {
+      sessionStorage.setItem('lobster_trending_config', JSON.stringify(config));
+    } catch {}
+    // Navigate to pipeline which will auto-detect and apply
+    onApplyTrending(config);
+    onNavigate('pipeline');
+    setTimeout(() => setApplyingId(null), 2000);
+  };
   return (
     <div className="animate-fade-in">
       {/* Hero */}
@@ -85,6 +100,75 @@ const DashboardPage: React.FC<Props> = ({ onNavigate, stats }) => {
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{action.desc}</div>
             </div>
           </button>
+        ))}
+      </div>
+
+      {/* Trending configs — 系统推荐 */}
+      <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 10, letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+        🔥 热门推荐
+        <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)' }}>根据市场热度自动更新 · 一键制作并发布</span>
+      </h3>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gap: 12, marginBottom: 28,
+      }}>
+        {TRENDING_CONFIGS.slice(0, 6).map((cfg) => (
+          <div key={cfg.id} className="card" style={{
+            padding: 16, display: 'flex', flexDirection: 'column', gap: 10,
+            border: `1px solid ${cfg.badgeColor}33`,
+            background: `linear-gradient(135deg, ${cfg.badgeColor}08, transparent)`,
+            position: 'relative', overflow: 'hidden',
+          }}>
+            {/* Badge */}
+            <div style={{
+              position: 'absolute', top: 0, right: 0,
+              background: cfg.badgeColor,
+              color: '#fff', fontSize: 10, fontWeight: 700,
+              padding: '3px 10px',
+              borderBottomLeftRadius: 8,
+            }}>
+              {cfg.badge}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 20 }}>{cfg.title.split(' ')[0]}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {cfg.title.replace(/^\S+\s/, '')}
+              </span>
+            </div>
+
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              {cfg.description}
+            </div>
+
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {cfg.tags.map(tag => (
+                <span key={tag} style={{
+                  padding: '1px 8px', borderRadius: 4, fontSize: 10,
+                  background: cfg.badgeColor + '18',
+                  color: cfg.badgeColor,
+                }}>
+                  #{tag}
+                </span>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+              <button
+                onClick={() => handleApplyAndMake(cfg)}
+                disabled={applyingId === cfg.id || applyingId !== null}
+                className="btn-primary"
+                style={{
+                  flex: 1, fontSize: 12, padding: '8px 12px',
+                  background: `linear-gradient(135deg, ${cfg.badgeColor}, ${cfg.badgeColor}88)`,
+                  opacity: applyingId === cfg.id ? 0.6 : 1,
+                }}
+              >
+                {applyingId === cfg.id ? '⏳ 正在启动...' : '🎬 一键制作并发布'}
+              </button>
+            </div>
+          </div>
         ))}
       </div>
 

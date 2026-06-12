@@ -59,7 +59,7 @@ const App: React.FC = () => {
 
   const renderPage = () => {
     switch (activePage) {
-      case 'dashboard': return <DashboardPage onNavigate={handleNavigate} stats={stats} />;
+      case 'dashboard': return <DashboardPage onNavigate={handleNavigate} onApplyTrending={(cfg) => { try { sessionStorage.setItem('lobster_trending_config', JSON.stringify(cfg)); } catch {} }} stats={stats} />;
       case 'script': return <ScriptFactoryPage />;
       case 'characters': return <CharacterWorkshopPage />;
       case 'storyboard': return <StoryboardPage />;
@@ -67,7 +67,7 @@ const App: React.FC = () => {
       case 'pipeline': return <PipelinePage />;
       case 'publish': return <PublishPage />;
       case 'settings': return <SettingsPage />;
-      default: return <DashboardPage onNavigate={handleNavigate} stats={stats} />;
+      default: return <DashboardPage onNavigate={handleNavigate} onApplyTrending={(cfg) => { try { sessionStorage.setItem('lobster_trending_config', JSON.stringify(cfg)); } catch {} }} stats={stats} />;
     }
   };
 
