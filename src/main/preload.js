@@ -95,6 +95,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   translateGenerateSRT: (subs) => ipcRenderer.invoke('translation:generateSRT', subs),
   translateStats: () => ipcRenderer.invoke('translation:stats'),
   translateRegionGroup: () => ipcRenderer.invoke('translation:regionGroup'),
+
+  // User Account
+  userRegister: (username, email, password) => ipcRenderer.invoke('user:register', username, email, password),
+  userLogin: (identifier, password) => ipcRenderer.invoke('user:login', identifier, password),
+  userLogout: () => ipcRenderer.invoke('user:logout'),
+  userGetSession: () => ipcRenderer.invoke('user:getSession'),
+  userUpdateProfile: (userId, updates) => ipcRenderer.invoke('user:updateProfile', userId, updates),
+
+  // Project Pack
+  projectExport: (projectData, options) => ipcRenderer.invoke('project:export', projectData, options),
+  projectImport: (packPath) => ipcRenderer.invoke('project:import', packPath),
+  projectListPacks: () => ipcRenderer.invoke('project:listPacks'),
+  projectOpenPack: () => ipcRenderer.invoke('dialog:openPack'),
 });
 
 // Listen for main process events

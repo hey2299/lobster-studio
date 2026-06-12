@@ -48,9 +48,9 @@ function getOutputDir() {
 }
 
 async function composeVideo(params) {
-  // params: { scenes: [{ imageDataUrl, audioDataUrl, duration }], bgmDataUrl?, outputName? }
+  // params: { scenes: [{ imageDataUrl, audioDataUrl, duration, dialogue }], bgmDataUrl?, outputName?, subtitleContent?, burnSubtitles? }
   const ff = await ensureFFmpeg();
-  const { scenes, bgmDataUrl, outputName } = params;
+  const { scenes, bgmDataUrl, outputName, subtitleContent, burnSubtitles } = params;
   
   // Step 1: Write input files into FFmpeg's virtual filesystem
   // Each scene = image frame + optional audio
@@ -113,8 +113,16 @@ async function composeVideo(params) {
     args.push('-f', 'concat', '-safe', '0', '-i', 'audio_concat.txt');
   }
 
+  // Add hardcoded subtitles (burn into video)
+  let vf = 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24';
+  if (burnSubtitles && subtitleContent) {
+    // Write SRT to virtual FS and use subtitles filter
+    await ff.writeFile('subs.srt', subtitleContent);
+    vf += `,subtitles=subs.srt:force_style='FontName=Arial,FontSize=28,MarginV=80,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BackColour=&H80000000,BorderStyle=4,Outline=2'`;
+  }
+
   args.push(
-    '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24',
+    '-vf', vf,
     '-c:v', 'libx264',
     '-preset', 'ultrafast',
     '-crf', '23',

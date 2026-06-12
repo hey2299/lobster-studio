@@ -14,6 +14,8 @@ const { generateBGMForScript } = require('./bgm-engine');
 const { getAllPlatformRules, getPlatformRules, analyzeScriptForPlatforms, generateOptimizedParams, adaptScriptForPlatform, generateHashtags } = require('./auto-detect');
 const { generateSRT, generateASS } = require('./subtitle-engine');
 const { exportCapCutDraft, exportFCPXML, exportASSProject } = require('./draft-export');
+const { register: userRegister, login: userLogin, logout: userLogout, getSession: userGetSession, updateProfile: userUpdateProfile, getUsers: userGetUsers } = require('./user-account');
+const { exportProject, importProject, listPacks } = require('./project-pack');
 
 let mainWindow;
 let dbInitialized = false;
@@ -425,6 +427,42 @@ function registerIpcHandlers() {
 
   ipcMain.handle('translation:regionGroup', async () => {
     return transEngine.groupByRegion();
+  });
+
+  // === User Account ===
+  ipcMain.handle('user:register', async (_, username, email, password) => {
+    return await userRegister(username, email, password);
+  });
+  ipcMain.handle('user:login', async (_, identifier, password) => {
+    return await userLogin(identifier, password);
+  });
+  ipcMain.handle('user:logout', async () => {
+    return await userLogout();
+  });
+  ipcMain.handle('user:getSession', async () => {
+    return await userGetSession();
+  });
+  ipcMain.handle('user:updateProfile', async (_, userId, updates) => {
+    return await userUpdateProfile(userId, updates);
+  });
+
+  // === Project Pack ===
+  ipcMain.handle('project:export', async (_, projectData, options) => {
+    return exportProject(projectData, options || {});
+  });
+  ipcMain.handle('project:import', async (_, packPath) => {
+    return importProject(packPath);
+  });
+  ipcMain.handle('project:listPacks', async () => {
+    return listPacks();
+  });
+  ipcMain.handle('dialog:openPack', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [{ name: '龙虾工坊项目', extensions: ['lspack'] }],
+    });
+    if (result.canceled) return { canceled: true };
+    return { path: result.filePaths[0], canceled: false };
   });
 }
 

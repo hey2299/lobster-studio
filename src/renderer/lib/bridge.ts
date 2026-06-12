@@ -168,6 +168,26 @@ export const ai = {
   getEditions: () => api?.licenseEditions() ?? Promise.resolve([]),
 };
 
+export const user = {
+  register: (username: string, email: string, password: string) =>
+    api?.userRegister(username, email, password) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
+  login: (identifier: string, password: string) =>
+    api?.userLogin(identifier, password) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
+  logout: () => api?.userLogout() ?? Promise.resolve({ success: false }),
+  getSession: () => api?.userGetSession() ?? Promise.resolve({ authenticated: false }),
+  updateProfile: (userId: string, updates: any) =>
+    api?.userUpdateProfile(userId, updates) ?? Promise.resolve({ success: false }),
+};
+
+export const pack = {
+  export: (projectData: any, options?: any) =>
+    api?.projectExport(projectData, options) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
+  import: (packPath: string) =>
+    api?.projectImport(packPath) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
+  listPacks: () => api?.projectListPacks() ?? Promise.resolve([]),
+  openPack: () => api?.projectOpenPack() ?? Promise.resolve({ canceled: true }),
+};
+
 // Events from main process
 export function onAIProgress(callback: (data: any) => void) {
   const handler = (e: CustomEvent) => callback(e.detail);
