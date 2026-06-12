@@ -7,6 +7,7 @@ const memory = require('./vector-memory');
 const { composeVideo, exportFrame, getAvailableOutputs } = require('./video-composer');
 const { getStatus: gitStatus, setRemote: gitSetRemote, removeRemote: gitRemoveRemote, push: gitPush, commitAndPush: gitCommitAndPush, getRecentCommits: gitRecentCommits } = require('./git-sync');
 const { getPlatforms, publishVideo, getPublishHistory, clearPublishHistory } = require('./publish-engine');
+const { getLicense, activateLicense, deactivateLicense, getEditionInfo, checkFeature } = require('./license');
 
 let mainWindow;
 let dbInitialized = false;
@@ -50,6 +51,10 @@ app.whenReady().then(async () => {
   try {
     await memory.initMemoryDB();
     console.log('Memory engine initialized');
+    // Inject memory into AI engine for character consistency across scripts
+    const aiEngine = require('./ai-engine');
+    aiEngine.injectMemory(memory);
+    console.log('Memory injected into AI engine');
   } catch (e) {
     console.error('Memory init failed:', e.message);
   }
@@ -214,6 +219,13 @@ function registerIpcHandlers() {
     const r = gitCommitAndPush(message, remoteName);
     return { success: r.success, error: r.error };
   });
+
+  // License
+  ipcMain.handle('license:get', async () => getLicense());
+  ipcMain.handle('license:activate', async (_, key, edition) => activateLicense(key, edition));
+  ipcMain.handle('license:deactivate', async () => deactivateLicense());
+  ipcMain.handle('license:editions', async () => getEditionInfo());
+  ipcMain.handle('license:checkFeature', async (_, feature) => checkFeature(feature));
 
   // Publish (Phase 3)
   ipcMain.handle('publish:getPlatforms', async () => {

@@ -39,6 +39,11 @@ declare global {
       gitRemoveRemote: (name: string) => Promise<any>;
       gitPush: (name: string, branch: string) => Promise<any>;
       gitCommitAndPush: (msg: string, name: string) => Promise<any>;
+      licenseGet: () => Promise<any>;
+      licenseActivate: (key: string, edition: string) => Promise<any>;
+      licenseDeactivate: () => Promise<any>;
+      licenseEditions: () => Promise<any>;
+      licenseCheckFeature: (feature: string) => Promise<any>;
     };
   }
 }
@@ -83,6 +88,10 @@ export const ai = {
   gitRemoveRemote: (name: string) => api?.gitRemoveRemote(name) ?? Promise.resolve({}),
   gitPush: (name: string, branch: string) => api?.gitPush(name, branch) ?? Promise.resolve({}),
   gitCommitAndPush: (msg: string, name: string) => api?.gitCommitAndPush(msg, name) ?? Promise.resolve({}),
+  getLicense: () => api?.licenseGet() ?? Promise.resolve({ activated: false, edition: 'community' }),
+  activateLicense: (key: string, edition: string) => api?.licenseActivate(key, edition) ?? Promise.resolve({}),
+  deactivateLicense: () => api?.licenseDeactivate() ?? Promise.resolve({}),
+  getEditions: () => api?.licenseEditions() ?? Promise.resolve([]),
 };
 
 // Events from main process

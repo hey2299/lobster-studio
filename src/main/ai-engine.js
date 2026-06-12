@@ -4,6 +4,46 @@ const OpenAI = require('openai');
 let client = null;
 let currentModel = 'deepseek-chat';
 
+// Memory injection - populated at init time
+let memoryModule = null;
+function injectMemory(memModule) {
+  memoryModule = memModule;
+}
+
+function getMemoryContext() {
+  if (!memoryModule) return '';
+  try {
+    const stats = memoryModule.getMemoryStats();
+    if (!stats || stats.characters === 0) return '';
+
+    // Get a sample of recent characters as memory context
+    const sampleChars = [];
+    // Read all character memories for injection
+    const allMemories = memoryModule.getAllCharacterMemories();
+    if (allMemories && allMemories.length > 0) {
+      const shown = new Set();
+      for (const char of allMemories) {
+        if (shown.size >= 5) break;
+        if (!shown.has(char.name)) {
+          shown.add(char.name);
+          sampleChars.push(char);
+        }
+      }
+    }
+
+    if (sampleChars.length === 0) return '';
+
+    const charDesc = sampleChars.map(c =>
+      `- ${c.name}（${c.role}）性格：${c.personality || '未知'}，声音：${c.voiceType || '默认'}，${c.appearance ? '外形：' + c.appearance : ''}`
+    ).join('\n');
+
+    return `\n\n【角色记忆库 - 已有角色，如果合适请复用】\n${charDesc}\n\n`;
+  } catch (e) {
+    console.warn('Memory injection failed:', e.message);
+    return '';
+  }
+}
+
 function getClient(apiKey, baseUrl) {
   if (client && baseUrl === undefined) return client;
   return new OpenAI({
@@ -33,12 +73,14 @@ async function generateScript(params) {
     'Style: ' + style,
     'Duration: ~' + duration + ' seconds (' + sceneCount + ' scenes)',
     'Keywords: ' + (keyword || 'none'),
-    '',
+    getMemoryContext(),
     'Requirements:',
     '- Tight pacing, hook in first 3 seconds',
     '- Each scene: location, mood, camera angle',
     '- Dialogue: natural, with conflict',
     '- Last scene: twist or cliffhanger',
+    '- If memory characters are provided, REUSE them for consistency',
+    '- Keep character personality consistent with memory',
     '',
     'Output ONLY valid JSON (no other text):',
     JSON.stringify({
@@ -252,4 +294,4 @@ async function generateTTS(text, voiceType) {
   return '';
 }
 
-module.exports = { configureAI, generateScript, generateCharacterPrompt, expandStoryboard, generateImage, generateAllSceneImages, generateTTS, getClient };
+module.exports = { configureAI, generateScript, generateCharacterPrompt, expandStoryboard, generateImage, generateAllSceneImages, generateTTS, getClient, injectMemory };

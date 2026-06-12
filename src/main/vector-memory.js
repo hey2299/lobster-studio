@@ -170,9 +170,22 @@ function getMemoryStats() {
   };
 }
 
+function getAllCharacterMemories() {
+  const stmt = db.prepare('SELECT profile_json FROM character_vectors');
+  const results = [];
+  while (stmt.step()) {
+    try {
+      const r = stmt.getAsObject();
+      results.push(JSON.parse(r.profile_json));
+    } catch { /* skip */ }
+  }
+  stmt.free();
+  return results;
+}
+
 process.on('exit', () => { if (db) { persistMemoryDB(); db.close(); } });
 
 module.exports = {
   initMemoryDB, storeCharacterMemory, searchSimilarCharacters,
-  findCharacterByName, addAlias, getCharacterMemory, getMemoryStats, generateEmbedding,
+  findCharacterByName, addAlias, getCharacterMemory, getMemoryStats, getAllCharacterMemories, generateEmbedding,
 };

@@ -169,16 +169,16 @@ const SettingsPage: React.FC = () => {
         )}
       </div>
 
+      {/* 授权管理 */}
+      <LicenseSection />
+
       {/* Git 远程备份 */}
       <RepoManagerSection />
 
       {/* 其他设置入口 */}
       {[
-        { title: '🔗 发布平台绑定', desc: '绑定抖音、快手、视频号等平台的发布账号', soon: false },
         { title: '⚙️ 输出设置', desc: '短片默认分辨率、格式、字幕样式', soon: true },
-        { title: '💾 角色记忆库', desc: '管理跨短剧角色记忆存储位置和备份', soon: true },
         { title: '🔄 音色更新', desc: '设置音色库自动更新时间', soon: true },
-        { title: '🔑 授权与更新', desc: '软件激活、许可证信息、自动更新', soon: true },
       ].map((section) => (
         <div key={section.title} style={{
           background: 'var(--bg-tertiary)', border: '1px solid var(--border)',
@@ -195,6 +195,104 @@ const SettingsPage: React.FC = () => {
     </div>
   );
 };
+
+// License activation component
+const LicenseSection: React.FC = () => {
+  const [license, setLicense] = useState<any>(null);
+  const [key, setKey] = useState('');
+  const [edition, setEdition] = useState('professional');
+  const [msg, setMsg] = useState('');
+  const [editions, setEditions] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadLicense();
+    ai.getEditions().then(setEditions);
+  }, []);
+
+  const loadLicense = async () => {
+    const l = await ai.getLicense();
+    setLicense(l);
+    setMsg(l.activated ? '' : '');
+  };
+
+  const handleActivate = async () => {
+    if (!key) return;
+    const result = await ai.activateLicense(key, edition);
+    if (result.success) {
+      setMsg('✅ 激活成功！已升级为 ' + (result.edition === 'professional' ? '专业版' : '永久版'));
+      await loadLicense();
+    } else {
+      setMsg('❌ ' + (result.error || '激活失败'));
+    }
+    setTimeout(() => setMsg(''), 5000);
+  };
+
+  const handleDeactivate = async () => {
+    await ai.deactivateLicense();
+    setMsg('已恢复为社区版');
+    await loadLicense();
+    setTimeout(() => setMsg(''), 3000);
+  };
+
+  return (
+    <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 16 }}>
+      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>🔑 授权管理</h3>
+      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+        当前版本：{license?.edition === 'professional' ? '专业版' : license?.edition === 'lifetime' ? '永久版' : '社区版'}
+        {license?.activated ? ' ✅ 已激活' : ''}
+      </p>
+
+      {msg && (
+        <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: msg.includes('✅') ? '#10b98122' : '#e8414222', border: '1px solid', borderColor: msg.includes('✅') ? '#10b981' : '#e84142', fontSize: 13, color: msg.includes('✅') ? '#10b981' : '#ff6b6b' }}>
+          {msg}
+        </div>
+      )}
+
+      {!license?.activated ? (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>激活码</label>
+            <input value={key} onChange={e => setKey(e.target.value)} placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>版本</label>
+            {editions.filter(e => e.id !== 'community').map(e => (
+              <button key={e.id} onClick={() => setEdition(e.id)}
+                style={{
+                  marginRight: 8, padding: '6px 14px', borderRadius: 6,
+                  border: '1px solid', borderColor: edition === e.id ? '#e84142' : 'var(--border)',
+                  background: edition === e.id ? '#e8414218' : 'transparent',
+                  color: 'var(--text-primary)', cursor: 'pointer', fontSize: 13,
+                }}>
+                {e.name} {e.price}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={handleActivate}
+            style={{ padding: '10px 32px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #e84142, #ff6b6b)', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
+            🔑 激活
+          </button>
+
+          <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+            💡 演示激活码：<code>LOBSTER-PRO-2026-DEMO</code>
+            <br />
+            专业版：¥199/年（支持 AI 生成、视频合成、多平台发布）
+            <br />
+            永久版：¥599（终身更新 + 优先技术支持）
+          </div>
+        </>
+      ) : (
+        <button onClick={handleDeactivate}
+          style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13 }}>
+          🔓 解除激活
+        </button>
+      )}
+    </div>
+  );
+}
 
 // Separate component for Git backup
 const RepoManagerSection: React.FC = () => {
@@ -271,7 +369,7 @@ const RepoManagerSection: React.FC = () => {
               {status.remotes.map((r: any) => (
                 <div key={r.name} style={{ padding: '4px 10px', borderRadius: 6, background: '#10b98122', border: '1px solid #10b98144', fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
                   {r.type === 'github' ? '🐙' : '🔗'} {r.name}: {r.url}
-                  <button onClick={async () => { await ai.gitRemoveRemote(r.name); await refreshStatus(); }}
+                  <button onClick={() => { ai.gitRemoveRemote(r.name).then(() => refreshStatus()); }}
                     style={{ background: 'none', border: 'none', color: '#e84142', cursor: 'pointer', padding: 0, fontSize: 14 }}>
                     ×
                   </button>

@@ -40,6 +40,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   videoCompose: (params) => ipcRenderer.invoke('video:compose', params),
   videoListOutputs: () => ipcRenderer.invoke('video:listOutputs'),
 
+  // License
+  licenseGet: () => ipcRenderer.invoke('license:get'),
+  licenseActivate: (key, edition) => ipcRenderer.invoke('license:activate', key, edition),
+  licenseDeactivate: () => ipcRenderer.invoke('license:deactivate'),
+  licenseEditions: () => ipcRenderer.invoke('license:editions'),
+  licenseCheckFeature: (feature) => ipcRenderer.invoke('license:checkFeature', feature),
+
   // Git
   gitStatus: () => ipcRenderer.invoke('git:status'),
   gitSetRemote: (name, url) => ipcRenderer.invoke('git:setRemote', name, url),
