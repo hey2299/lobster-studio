@@ -50,12 +50,9 @@ const SettingsPage: React.FC = () => {
 
   const testConnection = async () => {
     setTestResult('⏳ 测试连接中...');
-    // Try generating a simple script to test the API
     try {
       await ai.configure(settings.llmProvider, settings.llmApiKey, settings.llmModel);
-      const result = await ai.generateScript({
-        genre: '测试', style: '测试', duration: 30, keyword: '测试API连接',
-      });
+      const result = await ai.generateScript({ genre: '测试', style: '测试', duration: 30, keyword: '测试API连接' });
       if (result.success) {
         setTestResult('✅ API 连接成功！已生成测试剧本');
       } else {
@@ -172,9 +169,12 @@ const SettingsPage: React.FC = () => {
         )}
       </div>
 
+      {/* Git 远程备份 */}
+      <RepoManagerSection />
+
       {/* 其他设置入口 */}
       {[
-        { title: '🔗 发布平台绑定', desc: '绑定抖音、快手、视频号等平台的发布账号', soon: true },
+        { title: '🔗 发布平台绑定', desc: '绑定抖音、快手、视频号等平台的发布账号', soon: false },
         { title: '⚙️ 输出设置', desc: '短片默认分辨率、格式、字幕样式', soon: true },
         { title: '💾 角色记忆库', desc: '管理跨短剧角色记忆存储位置和备份', soon: true },
         { title: '🔄 音色更新', desc: '设置音色库自动更新时间', soon: true },
@@ -192,6 +192,132 @@ const SettingsPage: React.FC = () => {
           {section.soon && <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '2px 8px', borderRadius: 4 }}>即将上线</span>}
         </div>
       ))}
+    </div>
+  );
+};
+
+// Separate component for Git backup
+const RepoManagerSection: React.FC = () => {
+  const [status, setStatus] = useState<any>(null);
+  const [remoteUrl, setRemoteUrl] = useState('');
+  const [remoteName, setRemoteName] = useState('origin');
+  const [msg, setMsg] = useState('');
+  const [commitMsg, setCommitMsg] = useState('auto backup');
+  const [loading, setLoading] = useState('');
+
+  useEffect(() => { refreshStatus(); }, []);
+
+  const refreshStatus = async () => {
+    const s = await ai.gitStatus();
+    setStatus(s);
+    if (s.remotes?.length > 0) {
+      setRemoteUrl(s.remotes[0].url);
+      setRemoteName(s.remotes[0].name);
+    }
+  };
+
+  const handleSetRemote = async () => {
+    if (!remoteUrl) return;
+    setLoading('remote');
+    await ai.gitSetRemote(remoteName, remoteUrl);
+    await refreshStatus();
+    setMsg('✅ 远程仓库已设置');
+    setLoading('');
+    setTimeout(() => setMsg(''), 3000);
+  };
+
+  const handlePush = async () => {
+    setLoading('push');
+    const result = await ai.gitCommitAndPush(commitMsg, remoteName || 'origin');
+    setMsg(result.success ? '✅ 推送成功！' : '❌ ' + (result.error || '推送失败'));
+    setLoading('');
+    await refreshStatus();
+    setTimeout(() => setMsg(''), 5000);
+  };
+
+  return (
+    <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 16 }}>
+      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>🔒 Git 远程备份</h3>
+      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+        将项目代码备份到 GitHub / Gitee
+      </p>
+
+      {!status ? (
+        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>正在获取状态...</div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 8, background: 'var(--bg-secondary)', fontSize: 12 }}>
+            <span>📂 <strong>{status.branch}</strong></span>
+            <span>🔖 <code>{status.commit}</code></span>
+            <span>{status.hasChanges ? `📝 ${status.fileCount} 个文件待提交` : '✅ 工作区干净'}</span>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>远程仓库地址</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={remoteUrl}
+                onChange={e => setRemoteUrl(e.target.value)}
+                placeholder="https://github.com/用户名/仓库名.git"
+                style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
+              />
+              <button onClick={handleSetRemote} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: loading === 'remote' ? 'var(--border)' : 'var(--accent)', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
+                {loading === 'remote' ? '...' : '绑定'}
+              </button>
+            </div>
+          </div>
+
+          {status.remotes?.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+              {status.remotes.map((r: any) => (
+                <div key={r.name} style={{ padding: '4px 10px', borderRadius: 6, background: '#10b98122', border: '1px solid #10b98144', fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {r.type === 'github' ? '🐙' : '🔗'} {r.name}: {r.url}
+                  <button onClick={async () => { await ai.gitRemoveRemote(r.name); await refreshStatus(); }}
+                    style={{ background: 'none', border: 'none', color: '#e84142', cursor: 'pointer', padding: 0, fontSize: 14 }}>
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {status.hasChanges && (
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>提交说明</label>
+              <input value={commitMsg} onChange={e => setCommitMsg(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+              />
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={handlePush} disabled={loading === 'push'}
+              style={{ padding: '10px 24px', borderRadius: 8, border: 'none', background: loading === 'push' ? 'var(--border)' : '#10b981', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 14, flex: 1 }}>
+              {loading === 'push' ? '⏳ 提交并推送中...' : '⬆️ 提交并推送'}
+            </button>
+            <button onClick={refreshStatus}
+              style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13 }}>
+              🔄 刷新
+            </button>
+          </div>
+
+          {msg && (
+            <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: msg.includes('✅') ? '#10b98122' : '#e8414222', border: `1px solid ${msg.includes('✅') ? '#10b981' : '#e84142'}`, fontSize: 13, color: msg.includes('✅') ? '#10b981' : '#ff6b6b' }}>
+              {msg}
+            </div>
+          )}
+
+          {status.recentLog?.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>最近提交：</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+                {status.recentLog.map((line: string, i: number) => (
+                  <div key={i} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{line}</div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

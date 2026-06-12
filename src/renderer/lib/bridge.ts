@@ -30,6 +30,15 @@ declare global {
       aiGenerateTTS: (text: string, voiceType: string) => Promise<{ success: boolean; data?: { audioUrl: string }; error?: string }>;
       videoCompose: (params: any) => Promise<{ success: boolean; data?: { outputPath: string }; error?: string }>;
       videoListOutputs: () => Promise<{ name: string; path: string; size: number; createdAt: string }[]>;
+      publishGetPlatforms: () => Promise<{ id: string; name: string; icon: string; color: string; authed: boolean; account: string }[]>;
+      publishVideo: (platformId: string, videoPath: string, metadata: any) => Promise<{ success: boolean; data?: any; error?: string }>;
+      publishHistory: () => Promise<any[]>;
+      publishClearHistory: () => Promise<{ success: boolean }>;
+      gitStatus: () => Promise<any>;
+      gitSetRemote: (name: string, url: string) => Promise<any>;
+      gitRemoveRemote: (name: string) => Promise<any>;
+      gitPush: (name: string, branch: string) => Promise<any>;
+      gitCommitAndPush: (msg: string, name: string) => Promise<any>;
     };
   }
 }
@@ -65,6 +74,15 @@ export const ai = {
   generateTTS: (text: string, voiceType: string) => api?.aiGenerateTTS(text, voiceType) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
   composeVideo: (params: any) => api?.videoCompose(params) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
   listOutputs: () => api?.videoListOutputs() ?? Promise.resolve([]),
+  getPlatforms: () => api?.publishGetPlatforms() ?? Promise.resolve([]),
+  publishVideo: (platformId: string, videoPath: string, metadata: any) => api?.publishVideo(platformId, videoPath, metadata) ?? Promise.resolve({ success: false, error: 'Not in Electron' }),
+  getPublishHistory: () => api?.publishHistory() ?? Promise.resolve([]),
+  clearPublishHistory: () => api?.publishClearHistory() ?? Promise.resolve({ success: false }),
+  gitStatus: () => api?.gitStatus() ?? Promise.resolve({ branch: 'N/A' }),
+  gitSetRemote: (name: string, url: string) => api?.gitSetRemote(name, url) ?? Promise.resolve({}),
+  gitRemoveRemote: (name: string) => api?.gitRemoveRemote(name) ?? Promise.resolve({}),
+  gitPush: (name: string, branch: string) => api?.gitPush(name, branch) ?? Promise.resolve({}),
+  gitCommitAndPush: (msg: string, name: string) => api?.gitCommitAndPush(msg, name) ?? Promise.resolve({}),
 };
 
 // Events from main process

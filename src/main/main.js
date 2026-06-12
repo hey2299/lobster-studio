@@ -5,6 +5,8 @@ const { initDatabase, getCharacters, saveCharacter, deleteCharacter,
 const { generateScript, generateCharacterPrompt, expandStoryboard, configureAI, generateImage, generateAllSceneImages, generateTTS } = require('./ai-engine');
 const memory = require('./vector-memory');
 const { composeVideo, exportFrame, getAvailableOutputs } = require('./video-composer');
+const { getStatus: gitStatus, setRemote: gitSetRemote, removeRemote: gitRemoveRemote, push: gitPush, commitAndPush: gitCommitAndPush, getRecentCommits: gitRecentCommits } = require('./git-sync');
+const { getPlatforms, publishVideo, getPublishHistory, clearPublishHistory } = require('./publish-engine');
 
 let mainWindow;
 let dbInitialized = false;
@@ -186,6 +188,54 @@ function registerIpcHandlers() {
 
   ipcMain.handle('video:listOutputs', () => {
     return getAvailableOutputs();
+  });
+
+  // Git Sync
+  ipcMain.handle('git:status', async () => {
+    return gitStatus();
+  });
+
+  ipcMain.handle('git:setRemote', async (_, name, url) => {
+    const r = gitSetRemote(name, url);
+    return { success: r.success, error: r.error };
+  });
+
+  ipcMain.handle('git:removeRemote', async (_, name) => {
+    gitRemoveRemote(name);
+    return { success: true };
+  });
+
+  ipcMain.handle('git:push', async (_, remoteName, branch) => {
+    const r = gitPush(remoteName, branch);
+    return { success: r.success, error: r.error, needsCommit: r.needsCommit };
+  });
+
+  ipcMain.handle('git:commitAndPush', async (_, message, remoteName) => {
+    const r = gitCommitAndPush(message, remoteName);
+    return { success: r.success, error: r.error };
+  });
+
+  // Publish (Phase 3)
+  ipcMain.handle('publish:getPlatforms', async () => {
+    return getPlatforms();
+  });
+
+  ipcMain.handle('publish:video', async (_, platformId, videoPath, metadata) => {
+    try {
+      const result = await publishVideo(platformId, videoPath, metadata);
+      return { success: true, data: result };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('publish:history', async () => {
+    return getPublishHistory();
+  });
+
+  ipcMain.handle('publish:clearHistory', async () => {
+    clearPublishHistory();
+    return { success: true };
   });
 
   // TTS (Phase 2)

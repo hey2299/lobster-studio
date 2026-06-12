@@ -40,6 +40,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   videoCompose: (params) => ipcRenderer.invoke('video:compose', params),
   videoListOutputs: () => ipcRenderer.invoke('video:listOutputs'),
 
+  // Git
+  gitStatus: () => ipcRenderer.invoke('git:status'),
+  gitSetRemote: (name, url) => ipcRenderer.invoke('git:setRemote', name, url),
+  gitRemoveRemote: (name) => ipcRenderer.invoke('git:removeRemote', name),
+  gitPush: (name, branch) => ipcRenderer.invoke('git:push', name, branch),
+  gitCommitAndPush: (msg, name) => ipcRenderer.invoke('git:commitAndPush', msg, name),
+
+  // Publish
+  publishGetPlatforms: () => ipcRenderer.invoke('publish:getPlatforms'),
+  publishVideo: (platformId, videoPath, metadata) => ipcRenderer.invoke('publish:video', platformId, videoPath, metadata),
+  publishHistory: () => ipcRenderer.invoke('publish:history'),
+  publishClearHistory: () => ipcRenderer.invoke('publish:clearHistory'),
+
   // TTS
   aiGenerateTTS: (text, voiceType) => ipcRenderer.invoke('ai:generateTTS', text, voiceType),
 });
