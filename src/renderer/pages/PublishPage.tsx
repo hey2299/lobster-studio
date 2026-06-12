@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ai, db } from '../lib/bridge';
+import { ai, db, autodetect } from '../lib/bridge';
 
 interface Platform {
   id: string;
@@ -35,6 +35,9 @@ const PublishPage: React.FC = () => {
   const [selectedOutput, setSelectedOutput] = useState<string>('');
   const [publishing, setPublishing] = useState<Record<string, boolean>>({});
   const [result, setResult] = useState<{ platform: string; message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [autoAnalysis, setAutoAnalysis] = useState<any>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
   const [metadata, setMetadata] = useState({
     title: '',
     description: '',
@@ -55,6 +58,9 @@ const PublishPage: React.FC = () => {
     setPlatforms(p);
     setOutputs(o);
     setHistory(h);
+
+    // Auto-run analysis once
+    runAutoAnalysis();
   };
 
   const selectOutputFile = () => {
@@ -106,6 +112,36 @@ const PublishPage: React.FC = () => {
         type: 'error',
       });
     }
+  };
+
+  const runAutoAnalysis = async () => {
+    if (analyzing) return;
+    setAnalyzing(true);
+    try {
+      // Try to load current script data from localStorage
+      const saved = localStorage.getItem('lobster_pipeline_scenes');
+      if (saved) {
+        const data = JSON.parse(saved);
+        const totalDuration = (data.scenes || []).reduce((sum: number, s: any) => sum + (s.duration || 4), 0);
+        const analysis = await autodetect.analyze({
+          title: data.projectName || '当前短剧'
+        }, {
+          totalDuration,
+          sceneCount: (data.scenes || []).length,
+          aspectRatio: '9:16',
+        });
+        setAutoAnalysis(analysis);
+      } else {
+        // Default analysis for generic drama
+        const analysis = await autodetect.analyze({ title: '默认' }, {
+          totalDuration: 120,
+          sceneCount: 8,
+          aspectRatio: '9:16',
+        });
+        setAutoAnalysis(analysis);
+      }
+    } catch {}
+    setAnalyzing(false);
   };
 
   const formatTime = (ts: number) => {
@@ -235,6 +271,76 @@ const PublishPage: React.FC = () => {
               <option value="private">私密</option>
             </select>
           </div>
+        </div>
+
+        {/* Auto-Detect Analysis */}
+        <div style={{
+          background: 'var(--bg-tertiary)', border: '1px solid var(--border)',
+          borderRadius: 12, padding: 20, marginBottom: 16,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>🔍 自动检测平台规则</div>
+            <button onClick={() => setAnalysisOpen(!analysisOpen)}
+              className="btn-ghost" style={{ fontSize: 12 }}>
+              {analysisOpen ? '收起' : '展开'} {autoAnalysis ? `(${Object.values(autoAnalysis).filter((a:any)=>a.recommended).length}/6 推荐)` : ''}
+            </button>
+          </div>
+
+          {analysisOpen && (
+            <>
+              {analyzing ? (
+                <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                  <span className="animate-spin" style={{ fontSize: 24 }}>🔍</span>
+                  <div style={{ marginTop: 8 }}>正在分析各平台规则...</div>
+                </div>
+              ) : autoAnalysis ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {Object.entries(autoAnalysis).sort(([,a]:any,[,b]:any)=>b.score-a.score).map(([id, data]: [string, any]) => (
+                    <div key={id} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '10px 12px', borderRadius: 8,
+                      background: 'var(--bg-secondary)',
+                      border: `1px solid ${data.recommended ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
+                    }}>
+                      <span style={{ fontSize: 20 }}>{data.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {data.platformName}
+                          <span className={`badge ${data.score >= 60 ? 'badge-success' : data.score >= 30 ? 'badge-warning' : 'badge-error'}`}>
+                            {data.score}分
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                          {data.warnings.length > 0 ? (
+                            <span style={{ color: data.score >= 50 ? '#10b981' : '#f59e0b' }}>
+                              {data.warnings.slice(0, 2).map((w: string) => '⚠️ ' + w).join(' · ')}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#10b981' }}>✅ 完全匹配平台要求</span>
+                          )}
+                        </div>
+                        {data.passes && data.passes.length > 0 && (
+                          <div style={{ fontSize: 10, color: '#10b981', marginTop: 1 }}>
+                            {data.passes.slice(0, 2).map((p: string, i: number) => (
+                              <div key={i}>✓ {p}</div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{
+                        width: 6, height: 6, borderRadius: '50%',
+                        background: data.recommended ? '#10b981' : '#f59e0b',
+                      }} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: 12, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+                  无法加载平台规则分析
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Platform grid */}

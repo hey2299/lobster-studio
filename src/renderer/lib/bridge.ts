@@ -53,6 +53,13 @@ declare global {
       draftExportCapCut: (project: any, scenes: any[], options?: any) => Promise<{ success: boolean; data?: { draftDir: string }; error?: string }>;
       draftExportFCPXML: (project: any, scenes: any[], options?: any) => Promise<{ success: boolean; data?: { xml: string }; error?: string }>;
       draftExportSubtitles: (scenes: any[], options?: any) => Promise<string>;
+      // AutoDetect
+      autodetectAllPlatforms: () => Promise<Record<string,any>>;
+      autodetectPlatformRules: (id: string) => Promise<any>;
+      autodetectAnalyze: (script: any, options?: any) => Promise<Record<string,any>>;
+      autodetectOptimize: (id: string, options?: any) => Promise<any>;
+      autodetectAdaptScript: (script: any, id: string, options?: any) => Promise<{ success: boolean; data?: any; error?: string }>;
+      autodetectHashtags: (id: string, genre?: string, style?: string) => Promise<string[]>;
     };
   }
 }
@@ -86,6 +93,17 @@ export const bgm = {
 export const subtitle = {
   generateSRT: (scenes: any[]) => api?.subtitleGenerateSRT(scenes) ?? Promise.resolve(''),
   generateASS: (scenes: any[], options?: any) => api?.subtitleGenerateASS(scenes, options) ?? Promise.resolve(''),
+};
+
+export const autodetect = {
+  allPlatforms: () => api?.autodetectAllPlatforms() ?? Promise.resolve({}),
+  platformRules: (id: string) => api?.autodetectPlatformRules(id) ?? Promise.resolve(null),
+  analyze: (script: any, options?: any) => api?.autodetectAnalyze(script, options) ?? Promise.resolve({}),
+  optimize: (id: string, options?: any) => api?.autodetectOptimize(id, options) ?? Promise.resolve(null),
+  adaptScript: (script: any, id: string, options?: any) =>
+    api?.autodetectAdaptScript(script, id, options) ?? Promise.resolve({ success: false }),
+  hashtags: (id: string, genre?: string, style?: string) =>
+    api?.autodetectHashtags(id, genre, style) ?? Promise.resolve([]),
 };
 
 export const draft = {

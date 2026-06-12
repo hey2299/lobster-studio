@@ -74,6 +74,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   draftExportCapCut: (project, scenes, options) => ipcRenderer.invoke('draft:exportCapCut', project, scenes, options),
   draftExportFCPXML: (project, scenes, options) => ipcRenderer.invoke('draft:exportFCPXML', project, scenes, options),
   draftExportSubtitles: (scenes, options) => ipcRenderer.invoke('draft:exportSubtitles', scenes, options),
+
+  // AutoDetect
+  autodetectAllPlatforms: () => ipcRenderer.invoke('autodetect:allPlatforms'),
+  autodetectPlatformRules: (id) => ipcRenderer.invoke('autodetect:platformRules', id),
+  autodetectAnalyze: (script, options) => ipcRenderer.invoke('autodetect:analyze', script, options),
+  autodetectOptimize: (id, options) => ipcRenderer.invoke('autodetect:optimize', id, options),
+  autodetectAdaptScript: (script, id, options) => ipcRenderer.invoke('autodetect:adaptScript', script, id, options),
+  autodetectHashtags: (id, genre, style) => ipcRenderer.invoke('autodetect:hashtags', id, genre, style),
 });
 
 // Listen for main process events

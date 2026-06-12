@@ -9,6 +9,7 @@ const { getStatus: gitStatus, setRemote: gitSetRemote, removeRemote: gitRemoveRe
 const { getPlatforms, publishVideo, getPublishHistory, clearPublishHistory } = require('./publish-engine');
 const { getLicense, activateLicense, deactivateLicense, getEditionInfo, checkFeature } = require('./license');
 const { generateBGMForScript } = require('./bgm-engine');
+const { getAllPlatformRules, getPlatformRules, analyzeScriptForPlatforms, generateOptimizedParams, adaptScriptForPlatform, generateHashtags } = require('./auto-detect');
 const { generateSRT, generateASS } = require('./subtitle-engine');
 const { exportCapCutDraft, exportFCPXML, exportASSProject } = require('./draft-export');
 
@@ -229,6 +230,36 @@ function registerIpcHandlers() {
   ipcMain.handle('license:deactivate', async () => deactivateLicense());
   ipcMain.handle('license:editions', async () => getEditionInfo());
   ipcMain.handle('license:checkFeature', async (_, feature) => checkFeature(feature));
+
+  // === Auto-Detect Engine ===
+  ipcMain.handle('autodetect:allPlatforms', async () => {
+    return getAllPlatformRules();
+  });
+
+  ipcMain.handle('autodetect:platformRules', async (_, platformId) => {
+    return getPlatformRules(platformId);
+  });
+
+  ipcMain.handle('autodetect:analyze', async (_, script, options) => {
+    return analyzeScriptForPlatforms(script, options || {});
+  });
+
+  ipcMain.handle('autodetect:optimize', async (_, platformId, options) => {
+    return generateOptimizedParams(platformId, options || {});
+  });
+
+  ipcMain.handle('autodetect:adaptScript', async (_, script, platformId, options) => {
+    try {
+      const adapted = adaptScriptForPlatform(script, platformId, options || {});
+      return { success: true, data: adapted };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('autodetect:hashtags', async (_, platformId, genre, style) => {
+    return generateHashtags(platformId, genre, style);
+  });
 
   // Publish (Phase 3)
   ipcMain.handle('publish:getPlatforms', async () => {
