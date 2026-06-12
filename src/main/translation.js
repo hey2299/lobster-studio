@@ -3,50 +3,59 @@
 // Uses existing AI engine providers (DeepSeek/OpenAI/SiliconFlow/GLM)
 // No external translation API required
 
-// Language definitions (we support translating FROM zh-CN)
+// Language definitions — 50 major world languages sorted by speaker population
+// All supported as translation targets (translate FROM zh-CN)
 const LANGUAGES = {
-  en: {
-    name: 'English', nativeName: 'English', flag: '🇬🇧',
-    code: 'en', ttsVoice: 'en-US', direction: 'ltr',
-    subtitleFormat: 'srt',
-    googleLang: 'en', awsPollyVoice: 'Joanna',
-  },
-  ja: {
-    name: 'Japanese', nativeName: '日本語', flag: '🇯🇵',
-    code: 'ja', ttsVoice: 'ja-JP', direction: 'ltr',
-    subtitleFormat: 'ass',
-    googleLang: 'ja',
-  },
-  ko: {
-    name: 'Korean', nativeName: '한국어', flag: '🇰🇷',
-    code: 'ko', ttsVoice: 'ko-KR', direction: 'ltr',
-    subtitleFormat: 'ass',
-    googleLang: 'ko',
-  },
-  vi: {
-    name: 'Vietnamese', nativeName: 'Tiếng Việt', flag: '🇻🇳',
-    code: 'vi', ttsVoice: 'vi-VN', direction: 'ltr',
-    subtitleFormat: 'srt',
-    googleLang: 'vi',
-  },
-  th: {
-    name: 'Thai', nativeName: 'ไทย', flag: '🇹🇭',
-    code: 'th', ttsVoice: 'th-TH', direction: 'ltr',
-    subtitleFormat: 'srt',
-    googleLang: 'th',
-  },
-  es: {
-    name: 'Spanish', nativeName: 'Español', flag: '🇪🇸',
-    code: 'es', ttsVoice: 'es-ES', direction: 'ltr',
-    subtitleFormat: 'srt',
-    googleLang: 'es', awsPollyVoice: 'Mia',
-  },
-  id: {
-    name: 'Indonesian', nativeName: 'Bahasa Indonesia', flag: '🇮🇩',
-    code: 'id', ttsVoice: 'id-ID', direction: 'ltr',
-    subtitleFormat: 'srt',
-    googleLang: 'id',
-  },
+  en: { name: 'English', nativeName: 'English', flag: '🇬🇧', code: 'en', ttsVoice: 'en-US', direction: 'ltr', subtitleFormat: 'srt', awsPollyVoice: 'Joanna', googleLang: 'en' },
+  zh: { name: 'Chinese', nativeName: '中文', flag: '🇨🇳', code: 'zh', ttsVoice: 'zh-CN', direction: 'ltr', subtitleFormat: 'ass', googleLang: 'zh' },
+  hi: { name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳', code: 'hi', ttsVoice: 'hi-IN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'hi' },
+  es: { name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', code: 'es', ttsVoice: 'es-ES', direction: 'ltr', subtitleFormat: 'srt', awsPollyVoice: 'Mia', googleLang: 'es' },
+  fr: { name: 'French', nativeName: 'Français', flag: '🇫🇷', code: 'fr', ttsVoice: 'fr-FR', direction: 'ltr', subtitleFormat: 'srt', awsPollyVoice: 'Lea', googleLang: 'fr' },
+  ar: { name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', code: 'ar', ttsVoice: 'ar-SA', direction: 'rtl', subtitleFormat: 'srt', googleLang: 'ar' },
+  bn: { name: 'Bengali', nativeName: 'বাংলা', flag: '🇧🇩', code: 'bn', ttsVoice: 'bn-BD', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'bn' },
+  ru: { name: 'Russian', nativeName: 'Русский', flag: '🇷🇺', code: 'ru', ttsVoice: 'ru-RU', direction: 'ltr', subtitleFormat: 'srt', awsPollyVoice: 'Tatyana', googleLang: 'ru' },
+  pt: { name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹', code: 'pt', ttsVoice: 'pt-PT', direction: 'ltr', subtitleFormat: 'srt', awsPollyVoice: 'Camila', googleLang: 'pt' },
+  ur: { name: 'Urdu', nativeName: 'اردو', flag: '🇵🇰', code: 'ur', ttsVoice: 'ur-PK', direction: 'rtl', subtitleFormat: 'srt', googleLang: 'ur' },
+  id: { name: 'Indonesian', nativeName: 'Bahasa Indonesia', flag: '🇮🇩', code: 'id', ttsVoice: 'id-ID', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'id' },
+  de: { name: 'German', nativeName: 'Deutsch', flag: '🇩🇪', code: 'de', ttsVoice: 'de-DE', direction: 'ltr', subtitleFormat: 'srt', awsPollyVoice: 'Marlene', googleLang: 'de' },
+  ja: { name: 'Japanese', nativeName: '日本語', flag: '🇯🇵', code: 'ja', ttsVoice: 'ja-JP', direction: 'ltr', subtitleFormat: 'ass', googleLang: 'ja' },
+  sw: { name: 'Swahili', nativeName: 'Kiswahili', flag: '🇹🇿', code: 'sw', ttsVoice: 'sw-TZ', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'sw' },
+  mr: { name: 'Marathi', nativeName: 'मराठी', flag: '🇮🇳', code: 'mr', ttsVoice: 'mr-IN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'mr' },
+  te: { name: 'Telugu', nativeName: 'తెలుగు', flag: '🇮🇳', code: 'te', ttsVoice: 'te-IN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'te' },
+  tr: { name: 'Turkish', nativeName: 'Türkçe', flag: '🇹🇷', code: 'tr', ttsVoice: 'tr-TR', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'tr' },
+  ta: { name: 'Tamil', nativeName: 'தமிழ்', flag: '🇮🇳', code: 'ta', ttsVoice: 'ta-IN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'ta' },
+  vi: { name: 'Vietnamese', nativeName: 'Tiếng Việt', flag: '🇻🇳', code: 'vi', ttsVoice: 'vi-VN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'vi' },
+  ko: { name: 'Korean', nativeName: '한국어', flag: '🇰🇷', code: 'ko', ttsVoice: 'ko-KR', direction: 'ltr', subtitleFormat: 'ass', googleLang: 'ko' },
+  it: { name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹', code: 'it', ttsVoice: 'it-IT', direction: 'ltr', subtitleFormat: 'srt', awsPollyVoice: 'Carla', googleLang: 'it' },
+  th: { name: 'Thai', nativeName: 'ไทย', flag: '🇹🇭', code: 'th', ttsVoice: 'th-TH', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'th' },
+  gu: { name: 'Gujarati', nativeName: 'ગુજરાતી', flag: '🇮🇳', code: 'gu', ttsVoice: 'gu-IN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'gu' },
+  pl: { name: 'Polish', nativeName: 'Polski', flag: '🇵🇱', code: 'pl', ttsVoice: 'pl-PL', direction: 'ltr', subtitleFormat: 'srt', awsPollyVoice: 'Ewa', googleLang: 'pl' },
+  uk: { name: 'Ukrainian', nativeName: 'Українська', flag: '🇺🇦', code: 'uk', ttsVoice: 'uk-UA', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'uk' },
+  ml: { name: 'Malayalam', nativeName: 'മലയാളം', flag: '🇮🇳', code: 'ml', ttsVoice: 'ml-IN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'ml' },
+  kn: { name: 'Kannada', nativeName: 'ಕನ್ನಡ', flag: '🇮🇳', code: 'kn', ttsVoice: 'kn-IN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'kn' },
+  or: { name: 'Odia', nativeName: 'ଓଡ଼ିଆ', flag: '🇮🇳', code: 'or', ttsVoice: 'or-IN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'or' },
+  my: { name: 'Burmese', nativeName: 'မြန်မာဘာသာ', flag: '🇲🇲', code: 'my', ttsVoice: 'my-MM', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'my' },
+  km: { name: 'Khmer', nativeName: 'ភាសាខ្មែរ', flag: '🇰🇭', code: 'km', ttsVoice: 'km-KH', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'km' },
+  tl: { name: 'Filipino', nativeName: 'Tagalog', flag: '🇵🇭', code: 'tl', ttsVoice: 'tl-PH', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'tl' },
+  ne: { name: 'Nepali', nativeName: 'नेपाली', flag: '🇳🇵', code: 'ne', ttsVoice: 'ne-NP', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'ne' },
+  ro: { name: 'Romanian', nativeName: 'Română', flag: '🇷🇴', code: 'ro', ttsVoice: 'ro-RO', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'ro' },
+  nl: { name: 'Dutch', nativeName: 'Nederlands', flag: '🇳🇱', code: 'nl', ttsVoice: 'nl-NL', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'nl' },
+  el: { name: 'Greek', nativeName: 'Ελληνικά', flag: '🇬🇷', code: 'el', ttsVoice: 'el-GR', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'el' },
+  hu: { name: 'Hungarian', nativeName: 'Magyar', flag: '🇭🇺', code: 'hu', ttsVoice: 'hu-HU', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'hu' },
+  cs: { name: 'Czech', nativeName: 'Čeština', flag: '🇨🇿', code: 'cs', ttsVoice: 'cs-CZ', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'cs' },
+  sv: { name: 'Swedish', nativeName: 'Svenska', flag: '🇸🇪', code: 'sv', ttsVoice: 'sv-SE', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'sv' },
+  da: { name: 'Danish', nativeName: 'Dansk', flag: '🇩🇰', code: 'da', ttsVoice: 'da-DK', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'da' },
+  fi: { name: 'Finnish', nativeName: 'Suomi', flag: '🇫🇮', code: 'fi', ttsVoice: 'fi-FI', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'fi' },
+  he: { name: 'Hebrew', nativeName: 'עברית', flag: '🇮🇱', code: 'he', ttsVoice: 'he-IL', direction: 'rtl', subtitleFormat: 'srt', googleLang: 'he' },
+  fa: { name: 'Persian', nativeName: 'فارسی', flag: '🇮🇷', code: 'fa', ttsVoice: 'fa-IR', direction: 'rtl', subtitleFormat: 'srt', googleLang: 'fa' },
+  ms: { name: 'Malay', nativeName: 'Bahasa Melayu', flag: '🇲🇾', code: 'ms', ttsVoice: 'ms-MY', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'ms' },
+  si: { name: 'Sinhala', nativeName: 'සිංහල', flag: '🇱🇰', code: 'si', ttsVoice: 'si-LK', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'si' },
+  am: { name: 'Amharic', nativeName: 'አማርኛ', flag: '🇪🇹', code: 'am', ttsVoice: 'am-ET', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'am' },
+  ka: { name: 'Georgian', nativeName: 'ქართული', flag: '🇬🇪', code: 'ka', ttsVoice: 'ka-GE', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'ka' },
+  hy: { name: 'Armenian', nativeName: 'Հայերեն', flag: '🇦🇲', code: 'hy', ttsVoice: 'hy-AM', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'hy' },
+  mn: { name: 'Mongolian', nativeName: 'Монгол', flag: '🇲🇳', code: 'mn', ttsVoice: 'mn-MN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'mn' },
+  lo: { name: 'Lao', nativeName: 'ລາວ', flag: '🇱🇦', code: 'lo', ttsVoice: 'lo-LA', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'lo' },
+  bo: { name: 'Tibetan', nativeName: 'བོད་སྐད།', flag: '🇨🇳', code: 'bo', ttsVoice: 'bo-CN', direction: 'ltr', subtitleFormat: 'srt', googleLang: 'bo' },
 };
 
 class TranslationEngine {
@@ -65,6 +74,41 @@ class TranslationEngine {
 
   getLanguageInfo(code) {
     return LANGUAGES[code] || null;
+  }
+
+  // Group languages by region
+  groupByRegion() {
+    const regionDefs = {
+      global: { name: '全球通用', codes: ['en'] },
+      china: { name: '中国', codes: ['zh','bo'] },
+      southAsia: { name: '南亚', codes: ['hi','bn','mr','te','ta','gu','ml','kn','or','ne','si'] },
+      spanish: { name: '西班牙语区', codes: ['es'] },
+      french: { name: '法语区', codes: ['fr'] },
+      middleEast: { name: '中东/阿拉伯', codes: ['ar','ur','he','fa'] },
+      slavic: { name: '斯拉夫语系', codes: ['ru','uk'] },
+      romance: { name: '罗曼语系', codes: ['pt','it','ro'] },
+      germanic: { name: '日耳曼语系', codes: ['de','nl'] },
+      nordic: { name: '北欧', codes: ['sv','da'] },
+      eastAsia: { name: '东亚', codes: ['ja','ko'] },
+      seAsia: { name: '东南亚', codes: ['id','vi','th','my','km','tl','ms','lo'] },
+      westSlavic: { name: '西斯拉夫', codes: ['pl','cs'] },
+      finnoUgric: { name: '芬兰-乌戈尔', codes: ['hu','fi'] },
+      balkan: { name: '巴尔干', codes: ['el','tr'] },
+      africa: { name: '非洲', codes: ['sw','am'] },
+      centralAsia: { name: '中亚/高加索', codes: ['ka','hy','mn'] },
+    };
+
+    const result = {};
+    for (const [key, def] of Object.entries(regionDefs)) {
+      const codes = def.codes.filter(c => LANGUAGES[c]);
+      if (codes.length > 0) {
+        result[key] = {
+          name: def.name,
+          languages: codes.map(c => LANGUAGES[c]),
+        };
+      }
+    }
+    return result;
   }
 
   // Translate a batch of scenes (for script adaptation)
