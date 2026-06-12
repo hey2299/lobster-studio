@@ -62,6 +62,16 @@ declare global {
       autodetectHashtags: (id: string, genre?: string, style?: string) => Promise<string[]>;
       autodetectRegionSummary: (mode: string) => Promise<any[]>;
       autodetectRegion: (id: string) => Promise<string | null>;
+
+      // Translation
+      translateLanguages: () => Promise<any[]>;
+      translateLanguageInfo: (code: string) => Promise<any>;
+      translateText: (text: string, lang: string) => Promise<{ success: boolean; data?: string; error?: string }>;
+      translateScript: (scenes: any[], lang: string, opts?: any) => Promise<{ success: boolean; data?: any[]; error?: string }>;
+      translateSubtitles: (subs: any[], lang: string, opts?: any) => Promise<{ success: boolean; data?: any[]; error?: string }>;
+      translateBilingualASS: (zh: any[], t: any[], lang: string) => Promise<{ success: boolean; data?: string; error?: string }>;
+      translateGenerateSRT: (subs: any[]) => Promise<string>;
+      translateStats: () => Promise<any>;
     };
   }
 }
@@ -108,6 +118,18 @@ export const autodetect = {
     api?.autodetectHashtags(id, genre, style) ?? Promise.resolve([]),
   regionSummary: (mode: string) => api?.autodetectRegionSummary(mode) ?? Promise.resolve([]),
   region: (id: string) => api?.autodetectRegion(id) ?? Promise.resolve(null),
+};
+
+// Translation exports
+export const translate = {
+  languages: () => api?.translateLanguages() ?? Promise.resolve([]),
+  languageInfo: (code: string) => api?.translateLanguageInfo(code) ?? Promise.resolve(null),
+  text: (text: string, lang: string) => api?.translateText(text, lang) ?? Promise.resolve({ success: false }),
+  script: (scenes: any[], lang: string, opts?: any) => api?.translateScript(scenes, lang, opts) ?? Promise.resolve({ success: false }),
+  subtitles: (subs: any[], lang: string, opts?: any) => api?.translateSubtitles(subs, lang, opts) ?? Promise.resolve({ success: false }),
+  bilingualASS: (zh: any[], t: any[], lang: string) => api?.translateBilingualASS(zh, t, lang) ?? Promise.resolve({ success: false }),
+  generateSRT: (subs: any[]) => api?.translateGenerateSRT(subs) ?? Promise.resolve(''),
+  stats: () => api?.translateStats() ?? Promise.resolve({}),
 };
 
 export const draft = {

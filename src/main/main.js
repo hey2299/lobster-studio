@@ -8,6 +8,8 @@ const { composeVideo, exportFrame, getAvailableOutputs } = require('./video-comp
 const { getStatus: gitStatus, setRemote: gitSetRemote, removeRemote: gitRemoveRemote, push: gitPush, commitAndPush: gitCommitAndPush, getRecentCommits: gitRecentCommits } = require('./git-sync');
 const { getPlatforms, publishVideo, getPublishHistory, clearPublishHistory } = require('./publish-engine');
 const { getLicense, activateLicense, deactivateLicense, getEditionInfo, checkFeature } = require('./license');
+const { TranslationEngine, LANGUAGES } = require('./translation.js');
+let transEngine = null;
 const { generateBGMForScript } = require('./bgm-engine');
 const { getAllPlatformRules, getPlatformRules, analyzeScriptForPlatforms, generateOptimizedParams, adaptScriptForPlatform, generateHashtags } = require('./auto-detect');
 const { generateSRT, generateASS } = require('./subtitle-engine');
@@ -347,6 +349,78 @@ function registerIpcHandlers() {
     } catch (e) {
       return { success: false, error: e.message };
     }
+  });
+
+  // === Translation Engine (Phase 5) ===
+  // Wrap AI engine's client for translation calls
+  const aiEngine = require('./ai-engine');
+  const aiCallerWrapper = {
+    chat: async (params) => {
+      // Reuse the AI engine's configured client
+      const client = aiEngine.getClient();
+      if (client) {
+        try {
+          return await client.chat.completions.create(params);
+        } catch (e) {
+          console.warn('Translation AI call failed, falling back:', e.message);
+          return null;
+        }
+      }
+      return null;
+    },
+  };
+  transEngine = new TranslationEngine(aiCallerWrapper);
+
+  ipcMain.handle('translation:languages', async () => {
+    return transEngine.getAvailableLanguages();
+  });
+
+  ipcMain.handle('translation:languageInfo', async (_, code) => {
+    return transEngine.getLanguageInfo(code);
+  });
+
+  ipcMain.handle('translation:translateText', async (_, text, targetLang) => {
+    try {
+      const result = await transEngine.translateText(text, targetLang);
+      return { success: true, data: result };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('translation:translateScript', async (_, scenes, targetLang, options) => {
+    try {
+      const result = await transEngine.translateScript(scenes, targetLang, options || {});
+      return { success: true, data: result };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('translation:translateSubtitles', async (_, subtitles, targetLang, options) => {
+    try {
+      const result = await transEngine.translateSubtitles(subtitles, targetLang, options || {});
+      return { success: true, data: result };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('translation:generateBilingualASS', async (_, zhSubtitles, translated, lang) => {
+    try {
+      const ass = transEngine.generateBilingualASS(zhSubtitles, translated, lang || 'en');
+      return { success: true, data: ass };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('translation:generateSRT', async (_, subtitles) => {
+    return transEngine.generateSRT(subtitles);
+  });
+
+  ipcMain.handle('translation:stats', async () => {
+    return transEngine.getStats();
   });
 }
 

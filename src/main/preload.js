@@ -84,6 +84,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   autodetectHashtags: (id, genre, style) => ipcRenderer.invoke('autodetect:hashtags', id, genre, style),
   autodetectRegionSummary: (mode) => ipcRenderer.invoke('autodetect:regionSummary', mode),
   autodetectRegion: (id) => ipcRenderer.invoke('autodetect:region', id),
+
+  // Translation
+  translateLanguages: () => ipcRenderer.invoke('translation:languages'),
+  translateLanguageInfo: (code) => ipcRenderer.invoke('translation:languageInfo', code),
+  translateText: (text, lang) => ipcRenderer.invoke('translation:translateText', text, lang),
+  translateScript: (scenes, lang, opts) => ipcRenderer.invoke('translation:translateScript', scenes, lang, opts),
+  translateSubtitles: (subs, lang, opts) => ipcRenderer.invoke('translation:translateSubtitles', subs, lang, opts),
+  translateBilingualASS: (zh, t, lang) => ipcRenderer.invoke('translation:generateBilingualASS', zh, t, lang),
+  translateGenerateSRT: (subs) => ipcRenderer.invoke('translation:generateSRT', subs),
+  translateStats: () => ipcRenderer.invoke('translation:stats'),
 });
 
 // Listen for main process events
